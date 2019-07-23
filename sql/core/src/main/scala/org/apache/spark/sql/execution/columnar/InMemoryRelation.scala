@@ -198,6 +198,11 @@ case class InMemoryRelation(
 
   override protected def otherCopyArgs: Seq[AnyRef] = Seq(statsOfPlanToCache)
 
+  // override `clone` since the default implementation won't carry over mutable states.
+  override def clone(): LogicalPlan = {
+    this.copy()(statsOfPlanToCache)
+  }
+
   override def simpleString(maxFields: Int): String =
     s"InMemoryRelation [${truncatedString(output, ", ", maxFields)}], ${cacheBuilder.storageLevel}"
 }

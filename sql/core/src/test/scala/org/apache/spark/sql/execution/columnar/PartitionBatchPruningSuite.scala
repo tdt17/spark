@@ -178,7 +178,7 @@ class PartitionBatchPruningSuite
     val result = df.collect().map(_(0)).toArray
     assert(result.length === 1)
 
-    val (readPartitions, readBatches) = df.queryExecution.sparkPlan.collect {
+    val (readPartitions, readBatches) = df.queryExecution.executedPlan.collect {
         case in: InMemoryTableScanExec => (in.readPartitions.value, in.readBatches.value)
       }.head
     assert(readPartitions === 5)
@@ -199,7 +199,7 @@ class PartitionBatchPruningSuite
         df.collect().map(_(0)).toArray
       }
 
-      val (readPartitions, readBatches) = df.queryExecution.sparkPlan.collect {
+      val (readPartitions, readBatches) = df.queryExecution.executedPlan.collect {
         case in: InMemoryTableScanExec => (in.readPartitions.value, in.readBatches.value)
       }.head
 
