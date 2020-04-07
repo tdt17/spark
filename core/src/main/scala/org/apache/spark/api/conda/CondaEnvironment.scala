@@ -41,6 +41,7 @@ final class CondaEnvironment(
     bootstrapMode: CondaBootstrapMode,
     bootstrapPackages: Seq[String],
     bootstrapPackageUrls: Seq[String],
+    private var bootstrapPackageUrlsUserInfo: Option[String],
     bootstrapChannels: Seq[String],
     extraArgs: Seq[String] = Nil,
     envVars: Map[String, String] = Map.empty) extends Logging {
@@ -72,6 +73,10 @@ final class CondaEnvironment(
   def setChannels(urls: Seq[String]): Unit = {
     channels.clear()
     channels ++= urls.iterator.map(AuthenticatedChannel.apply)
+  }
+
+  def setPackageUrlsUserInfo(userInfo: Option[String]): Unit = {
+    bootstrapPackageUrlsUserInfo = userInfo
   }
 
   def getTransitivePackageUrls(): List[String] = {
@@ -115,6 +120,7 @@ final class CondaEnvironment(
       bootstrapMode,
       packages.toList,
       bootstrapPackageUrls,
+      bootstrapPackageUrlsUserInfo,
       channels.toList,
       extraArgs,
       envVars)
@@ -177,6 +183,7 @@ object CondaEnvironment {
       mode: CondaBootstrapMode,
       packages: Seq[String],
       packageUrls: Seq[String],
+      packageUrlsUserInfo: Option[String],
       unauthenticatedChannels: Seq[UnauthenticatedChannel],
       extraArgs: Seq[String],
       envVars: Map[String, String])
@@ -200,11 +207,13 @@ object CondaEnvironment {
         mode: CondaBootstrapMode,
         packages: Seq[String],
         packageUrls: Seq[String],
+        packageUrlsUserInfo: Option[String],
         channels: Seq[AuthenticatedChannel],
         extraArgs: Seq[String],
         envVars: Map[String, String]): CondaSetupInstructions = {
       val ChannelsWithCreds(unauthed, userInfos) = unauthenticateChannels(channels)
-      CondaSetupInstructions(mode, packages, packageUrls, unauthed, extraArgs, envVars)(userInfos)
+      CondaSetupInstructions(
+        mode, packages, packageUrls, packageUrlsUserInfo, unauthed, extraArgs, envVars)(userInfos)
     }
   }
 }

@@ -16,11 +16,13 @@
  */
 package org.apache.spark.api.conda
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 import java.util.regex.Pattern
+import javax.ws.rs.core.UriBuilder
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -82,6 +84,7 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
       condaMode: CondaBootstrapMode,
       condaPackages: Seq[String],
       condaPackageUrls: Seq[String],
+      condaPackageUrlsUserInfo: Option[String],
       condaChannelUrls: Seq[String],
       condaExtraArgs: Seq[String] = Nil,
       condaEnvVars: Map[String, String] = Map.empty): CondaEnvironment = {
@@ -89,7 +92,8 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
       case CondaBootstrapMode.Solve =>
         create(baseDir, condaPackages, condaChannelUrls, condaExtraArgs, condaEnvVars)
       case CondaBootstrapMode.File =>
-        createWithFile(baseDir, condaPackageUrls, condaExtraArgs, condaEnvVars)
+        createWithFile(
+          baseDir, condaPackageUrls, condaPackageUrlsUserInfo, condaExtraArgs, condaEnvVars)
     }
   }
 
@@ -131,6 +135,7 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
       CondaBootstrapMode.Solve,
       condaPackages,
       Nil,
+      None,
       condaChannelUrls,
       condaExtraArgs)
   }
@@ -138,9 +143,13 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
   def createWithFile(
       baseDir: String,
       condaPackageUrls: Seq[String],
+      condaPackageUrlsUserInfo: Option[String],
       condaExtraArgs: Seq[String] = Nil,
       condaEnvVars: Map[String, String] = Map.empty): CondaEnvironment = {
     require(condaPackageUrls.nonEmpty, "Expected at least one conda package url.")
+    require(condaPackageUrls.find(packageUrl => new URI(packageUrl).getUserInfo != null).isEmpty,
+      "Cannot pass condaPackageUrls with inlined auth; pass UserInfo " +
+        "via spark.conda.bootstrapPackageUrlsUserInfo.")
     val name = "conda-env"
 
     // must link in /tmp to reduce path length in case baseDir is very long...
@@ -152,9 +161,18 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
 
     val verbosityFlags = 0.until(verbosity).map(_ => "-v").toList
 
+    // Authenticate URLs if we have a UserInfo argument
+    val finalCondaPackageUrls = if (condaPackageUrlsUserInfo.isDefined) {
+      condaPackageUrls.map { packageUrl =>
+        UriBuilder.fromUri(packageUrl).userInfo(condaPackageUrlsUserInfo.get).build().toString
+      }
+    } else {
+      condaPackageUrls
+    }
+
     // Create spec file with URLs
     val specFilePath = linkedBaseDir.resolve("spec-file")
-    Files.write(specFilePath, ("@EXPLICIT" +: condaPackageUrls).asJava)
+    Files.write(specFilePath, ("@EXPLICIT" +: finalCondaPackageUrls).asJava)
 
     // Attempt to create environment
     runCondaProcess(
@@ -175,6 +193,7 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
       CondaBootstrapMode.File,
       Nil,
       condaPackageUrls,
+      condaPackageUrlsUserInfo,
       Nil,
       condaExtraArgs)
   }
@@ -312,7 +331,6 @@ object CondaEnvironmentManager extends Logging {
   private[this] def createCondaEnvironment(
             instructions: CondaSetupInstructions): CondaEnvironment = {
     val condaPackages = instructions.packages
-    val condaPackageUrls = instructions.packageUrls
     val env = SparkEnv.get
     val condaEnvManager = CondaEnvironmentManager.fromConf(env.conf)
     val envDir = {
@@ -326,7 +344,8 @@ object CondaEnvironmentManager extends Logging {
       envDir,
       instructions.mode,
       condaPackages,
-      condaPackageUrls,
+      instructions.packageUrls,
+      instructions.packageUrlsUserInfo,
       instructions.channels,
       instructions.extraArgs)
   }
