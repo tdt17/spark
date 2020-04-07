@@ -296,7 +296,7 @@ jobs:
     # depends on build-sbt, but we only need the assembly jars
     <<: *defaults
     docker:
-      - image: palantirtechnologies/circle-spark-python:0.2.1
+      - image: palantirtechnologies/circle-spark-python:0.2.2
     parallelism: 2
     steps:
       - *checkout-code
