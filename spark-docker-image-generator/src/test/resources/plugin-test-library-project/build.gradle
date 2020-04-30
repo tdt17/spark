@@ -32,14 +32,14 @@ repositories {
   maven { url System.env.MAVEN_REPO }
 }
 
-apply plugin: 'java'
+apply plugin: 'java-library'
 version System.getProperty("test-project-version")
 group 'org.apache.spark'
 sourceCompatibility = 1.8
 
 dependencies {
-  compile 'com.google.guava:guava:21.0'
-  compile 'org.apache.commons:commons-compress:1.18'
+  api 'org.apache.commons:commons-compress:1.18'
+  implementation 'com.google.guava:guava:21.0'
   sparkDockerRuntime 'commons-io:commons-io:2.4'
 }
 

@@ -15,38 +15,19 @@
  * limitations under the License.
  */
 
-buildscript {
-  repositories {
-    jcenter()
-    maven { url "http://palantir.bintray.com/releases" }
-  }
-}
+package org.apache.spark.test;
 
-plugins {
-  id 'org.apache.spark.deploy.kubernetes.docker.gradle'
-}
+import java.util.List;
 
-repositories {
-  jcenter()
-  maven { url "http://palantir.bintray.com/releases" }
-  maven { url System.env.MAVEN_REPO }
-}
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 
-apply plugin: 'java'
-version System.getProperty("test-project-version")
-group 'org.apache.spark'
-sourceCompatibility = 1.8
+public final class HelloWorld {
 
-dependencies {
-  compile 'com.google.guava:guava:21.0'
-  compile 'org.apache.commons:commons-compress:1.18'
-  sparkDockerRuntime 'commons-io:commons-io:2.4'
-}
+    private HelloWorld() { }
 
-sparkDocker {
-  baseImage 'openjdk:8-jdk-slim'
-  imagePath 'spark/spark-test-app'
-  snapshotRegistry 'docker.palantir.test.snapshot'
-  releaseRegistry 'docker.palantir.test.release'
-  tags System.getProperty('docker-tag')
+    public static void main(String[] args) {
+        List<String> strs = ImmutableList.of("Hello", "World");
+        System.out.println(Joiner.on(",").join(strs));
+    }
 }
