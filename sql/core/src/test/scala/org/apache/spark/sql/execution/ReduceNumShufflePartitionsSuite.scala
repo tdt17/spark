@@ -52,35 +52,29 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
   }
 
   private def checkEstimation(
-      rule: ReduceNumShufflePartitions,
       bytesByPartitionIdArray: Array[Array[Long]],
-      expectedPartitionStartIndices: Array[Int]): Unit = {
+      expectedPartitionStartIndices: Seq[Int],
+      targetSize: Long,
+      minNumPartitions: Int = 1): Unit = {
     val mapOutputStatistics = bytesByPartitionIdArray.zipWithIndex.map {
       case (bytesByPartitionId, index) =>
         new MapOutputStatistics(index, bytesByPartitionId)
     }
-    val estimatedPartitionStartIndices =
-      rule.estimatePartitionStartIndices(mapOutputStatistics)
+    val estimatedPartitionStartIndices = ReduceNumShufflePartitions.estimatePartitionStartIndices(
+      mapOutputStatistics,
+      targetSize,
+      minNumPartitions)
     assert(estimatedPartitionStartIndices === expectedPartitionStartIndices)
   }
 
-  private def createReduceNumShufflePartitionsRule(
-      advisoryTargetPostShuffleInputSize: Long,
-      minNumPostShufflePartitions: Int = 1): ReduceNumShufflePartitions = {
-    val conf = new SQLConf().copy(
-      SQLConf.SHUFFLE_TARGET_POSTSHUFFLE_INPUT_SIZE -> advisoryTargetPostShuffleInputSize,
-      SQLConf.SHUFFLE_MIN_NUM_POSTSHUFFLE_PARTITIONS -> minNumPostShufflePartitions)
-    ReduceNumShufflePartitions(conf)
-  }
-
   test("test estimatePartitionStartIndices - 1 Exchange") {
-    val rule = createReduceNumShufflePartitionsRule(100L)
+    val targetSize = 100
 
     {
       // All bytes per partition are 0.
       val bytesByPartitionId = Array[Long](0, 0, 0, 0, 0)
       val expectedPartitionStartIndices = Array[Int](0)
-      checkEstimation(rule, Array(bytesByPartitionId), expectedPartitionStartIndices)
+      checkEstimation(Array(bytesByPartitionId), expectedPartitionStartIndices, targetSize)
     }
 
     {
@@ -88,51 +82,49 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       // 1 post-shuffle partition is needed.
       val bytesByPartitionId = Array[Long](10, 0, 20, 0, 0)
       val expectedPartitionStartIndices = Array[Int](0)
-      checkEstimation(rule, Array(bytesByPartitionId), expectedPartitionStartIndices)
+      checkEstimation(Array(bytesByPartitionId), expectedPartitionStartIndices, targetSize)
     }
 
     {
       // 2 post-shuffle partitions are needed.
       val bytesByPartitionId = Array[Long](10, 0, 90, 20, 0)
       val expectedPartitionStartIndices = Array[Int](0, 3)
-      checkEstimation(rule, Array(bytesByPartitionId), expectedPartitionStartIndices)
+      checkEstimation(Array(bytesByPartitionId), expectedPartitionStartIndices, targetSize)
     }
 
     {
       // There are a few large pre-shuffle partitions.
       val bytesByPartitionId = Array[Long](110, 10, 100, 110, 0)
       val expectedPartitionStartIndices = Array[Int](0, 1, 2, 3, 4)
-      checkEstimation(rule, Array(bytesByPartitionId), expectedPartitionStartIndices)
+      checkEstimation(Array(bytesByPartitionId), expectedPartitionStartIndices, targetSize)
     }
 
     {
       // All pre-shuffle partitions are larger than the targeted size.
       val bytesByPartitionId = Array[Long](100, 110, 100, 110, 110)
       val expectedPartitionStartIndices = Array[Int](0, 1, 2, 3, 4)
-      checkEstimation(rule, Array(bytesByPartitionId), expectedPartitionStartIndices)
+      checkEstimation(Array(bytesByPartitionId), expectedPartitionStartIndices, targetSize)
     }
 
     {
       // The last pre-shuffle partition is in a single post-shuffle partition.
       val bytesByPartitionId = Array[Long](30, 30, 0, 40, 110)
       val expectedPartitionStartIndices = Array[Int](0, 4)
-      checkEstimation(rule, Array(bytesByPartitionId), expectedPartitionStartIndices)
+      checkEstimation(Array(bytesByPartitionId), expectedPartitionStartIndices, targetSize)
     }
   }
 
   test("test estimatePartitionStartIndices - 2 Exchanges") {
-    val rule = createReduceNumShufflePartitionsRule(100L)
+    val targetSize = 100
 
     {
       // If there are multiple values of the number of pre-shuffle partitions,
       // we should see an assertion error.
       val bytesByPartitionId1 = Array[Long](0, 0, 0, 0, 0)
       val bytesByPartitionId2 = Array[Long](0, 0, 0, 0, 0, 0)
-      val mapOutputStatistics =
-        Array(
-          new MapOutputStatistics(0, bytesByPartitionId1),
-          new MapOutputStatistics(1, bytesByPartitionId2))
-      intercept[AssertionError](rule.estimatePartitionStartIndices(mapOutputStatistics))
+      intercept[AssertionError]{
+        checkEstimation(Array(bytesByPartitionId1, bytesByPartitionId2), Seq.empty, targetSize)
+      }
     }
 
     {
@@ -141,9 +133,9 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](0, 0, 0, 0, 0)
       val expectedPartitionStartIndices = Array[Int](0)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize)
     }
 
     {
@@ -153,9 +145,9 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](30, 0, 20, 0, 20)
       val expectedPartitionStartIndices = Array[Int](0)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize)
     }
 
     {
@@ -164,9 +156,9 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](30, 0, 70, 0, 30)
       val expectedPartitionStartIndices = Array[Int](0, 2, 4)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize)
     }
 
     {
@@ -175,9 +167,9 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](30, 0, 70, 0, 30)
       val expectedPartitionStartIndices = Array[Int](0, 1, 2, 4)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize)
     }
 
     {
@@ -186,9 +178,9 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](30, 0, 70, 0, 30)
       val expectedPartitionStartIndices = Array[Int](0, 1, 2, 4)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize)
     }
 
     {
@@ -197,9 +189,9 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](30, 0, 60, 0, 110)
       val expectedPartitionStartIndices = Array[Int](0, 1, 2, 3, 4)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize)
     }
 
     {
@@ -208,14 +200,15 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](30, 0, 60, 70, 110)
       val expectedPartitionStartIndices = Array[Int](0, 1, 2, 3, 4)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize)
     }
   }
 
   test("test estimatePartitionStartIndices and enforce minimal number of reducers") {
-    val rule = createReduceNumShufflePartitionsRule(100L, 2)
+    val targetSize = 100
+    val minNumPartitions = 2
 
     {
       // The minimal number of post-shuffle partitions is not enforced because
@@ -224,9 +217,10 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](0, 0, 0, 0, 0)
       val expectedPartitionStartIndices = Array[Int](0)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize,
+        minNumPartitions)
     }
 
     {
@@ -235,9 +229,10 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](5, 10, 0, 10, 5)
       val expectedPartitionStartIndices = Array[Int](0, 3)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize,
+        minNumPartitions)
     }
 
     {
@@ -246,9 +241,10 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       val bytesByPartitionId2 = Array[Long](40, 10, 0, 10, 30)
       val expectedPartitionStartIndices = Array[Int](0, 1, 3, 4)
       checkEstimation(
-        rule,
         Array(bytesByPartitionId1, bytesByPartitionId2),
-        expectedPartitionStartIndices)
+        expectedPartitionStartIndices,
+        targetSize,
+        minNumPartitions)
     }
   }
 
@@ -268,7 +264,8 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
   def withSparkSession(
       f: SparkSession => Unit,
       targetPostShuffleInputSize: Int,
-      minNumPostShufflePartitions: Option[Int]): Unit = {
+      minNumPostShufflePartitions: Option[Int],
+      unsetMinMax: Boolean = false): Unit = {
     val sparkConf =
       new SparkConf(false)
         .setMaster("local[*]")
@@ -286,6 +283,11 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
         sparkConf.set(SQLConf.SHUFFLE_MIN_NUM_POSTSHUFFLE_PARTITIONS.key, numPartitions.toString)
       case None =>
         sparkConf.set(SQLConf.SHUFFLE_MIN_NUM_POSTSHUFFLE_PARTITIONS.key, "1")
+    }
+
+    if (unsetMinMax) {
+      sparkConf.remove(SQLConf.SHUFFLE_MAX_NUM_POSTSHUFFLE_PARTITIONS.key)
+      sparkConf.remove(SQLConf.SHUFFLE_MIN_NUM_POSTSHUFFLE_PARTITIONS.key)
     }
 
     val spark = SparkSession.builder()
@@ -521,6 +523,38 @@ class ReduceNumShufflePartitionsSuite extends SparkFunSuite with BeforeAndAfterA
       }
       withSparkSession(test, 12000, minNumPostShufflePartitions)
     }
+  }
+
+  // TODO(rshkv): Remove after taking SPARK-31124 (#676)
+  test("number of reducers is lower-bound by default parallelism without configured minimum") {
+    val test = { spark: SparkSession =>
+      val df =
+        spark
+          .range(0, 1000, 1, numInputPartitions)
+          .selectExpr("id % 20 as key", "id as value")
+      val agg = df.groupBy("key").count()
+
+      agg.collect()
+
+      val finalPlan = agg.queryExecution.executedPlan
+        .asInstanceOf[AdaptiveSparkPlanExec].executedPlan
+      val shuffleReaders = finalPlan.collect {
+        case reader: CoalescedShuffleReaderExec => reader
+      }
+
+      assert(shuffleReaders.length === 1)
+      shuffleReaders.foreach { reader =>
+        // Assert that there is no configured minimum
+        assert(!spark.conf.contains(SQLConf.SHUFFLE_MIN_NUM_POSTSHUFFLE_PARTITIONS.key))
+        // The number of output partitions will be slightly larger than defaultParallelism because
+        // input partitions don't exactly fit. Key here is that have more than one partition.
+        assert(reader.outputPartitioning.numPartitions >= spark.sparkContext.defaultParallelism)
+      }
+    }
+    // Pick an advisory partition size such that we'd have one partition
+    // if min = defaultParallelism didn't work
+    val targetSizeForOnePartition = 1000000000
+    withSparkSession(test, targetSizeForOnePartition, None, unsetMinMax = true)
   }
 
   test("SPARK-24705 adaptive query execution works correctly when exchange reuse enabled") {
