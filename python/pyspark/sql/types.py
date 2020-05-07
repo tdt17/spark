@@ -1676,6 +1676,12 @@ def from_arrow_type(at):
     elif types.is_list(at):
         if types.is_timestamp(at.value_type):
             raise TypeError("Unsupported type in conversion from Arrow: " + str(at))
+
+        # TODO(rshkv): Support binary type when we move off Python 2 (#678)
+        if sys.version < '3' and types.is_binary(at.value_type):
+            raise TypeError("Unsupported type in conversion from Arrow: " + str(at) +
+                            "\nPlease use Python3 for support of BinaryType in arrays.")
+
         spark_type = ArrayType(from_arrow_type(at.value_type))
     elif types.is_struct(at):
         # TODO: remove version check once minimum pyarrow version is 0.10.0
@@ -1746,6 +1752,19 @@ def _arrow_table_to_pandas(table, schema):
             return table.to_pandas()
     else:
         return table.to_pandas(date_as_object=True)
+
+
+def _infer_binary_columns_as_arrow_string(schema, pandas_df):
+    import pandas as pd
+    import pyarrow as pa
+
+    for field_index, field in enumerate(schema):
+        if field.type == pa.binary() and \
+                pd.api.types.infer_dtype(pandas_df.iloc[:, field_index]) == "string":
+            field_as_string = pa.field(field.name, pa.string())
+            schema = schema.set(field_index, field_as_string)
+
+    return schema
 
 
 def _get_local_timezone():
