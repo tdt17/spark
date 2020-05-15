@@ -772,4 +772,205 @@ class DataFrameAggregateSuite extends QueryTest with SharedSQLContext {
       Row(Seq(0.0f, 0.0f), Row(0.0d, Double.NaN), Seq(Row(0.0d, Double.NaN)), 2)
     )
   }
+
+  test("SPARK-27581: DataFrame countDistinct(\"*\") shouldn't fail with AnalysisException") {
+    val df = sql("select id % 100 from range(100000)")
+    val distinctCount1 = df.select(expr("count(distinct(*))"))
+    val distinctCount2 = df.select(countDistinct("*"))
+    checkAnswer(distinctCount1, distinctCount2)
+
+    val countAndDistinct = df.select(count("*"), countDistinct("*"))
+    checkAnswer(countAndDistinct, Row(100000, 100))
+  }
+
+  test("max_by") {
+    val yearOfMaxEarnings =
+      sql("SELECT course, max_by(year, earnings) FROM courseSales GROUP BY course")
+    checkAnswer(yearOfMaxEarnings, Row("dotNET", 2013) :: Row("Java", 2013) :: Nil)
+
+    checkAnswer(
+      sql("SELECT max_by(x, y) FROM VALUES (('a', 10)), (('b', 50)), (('c', 20)) AS tab(x, y)"),
+      Row("b") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT max_by(x, y) FROM VALUES (('a', 10)), (('b', null)), (('c', 20)) AS tab(x, y)"),
+      Row("c") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT max_by(x, y) FROM VALUES (('a', null)), (('b', null)), (('c', 20)) AS tab(x, y)"),
+      Row("c") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT max_by(x, y) FROM VALUES (('a', 10)), (('b', 50)), (('c', null)) AS tab(x, y)"),
+      Row("b") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT max_by(x, y) FROM VALUES (('a', null)), (('b', null)) AS tab(x, y)"),
+      Row(null) :: Nil
+    )
+
+    // structs as ordering value.
+    checkAnswer(
+      sql("select max_by(x, y) FROM VALUES (('a', (10, 20))), (('b', (10, 50))), " +
+        "(('c', (10, 60))) AS tab(x, y)"),
+      Row("c") :: Nil
+    )
+
+    checkAnswer(
+      sql("select max_by(x, y) FROM VALUES (('a', (10, 20))), (('b', (10, 50))), " +
+        "(('c', null)) AS tab(x, y)"),
+      Row("b") :: Nil
+    )
+
+    withTempView("tempView") {
+      val dfWithMap = Seq((0, "a"), (1, "b"), (2, "c"))
+        .toDF("x", "y")
+        .select($"x", map($"x", $"y").as("y"))
+        .createOrReplaceTempView("tempView")
+      val error = intercept[AnalysisException] {
+        sql("SELECT max_by(x, y) FROM tempView").show
+      }
+      assert(
+        error.message.contains("function max_by does not support ordering on type map<int,string>"))
+    }
+  }
+
+  test("min_by") {
+    val yearOfMinEarnings =
+      sql("SELECT course, min_by(year, earnings) FROM courseSales GROUP BY course")
+    checkAnswer(yearOfMinEarnings, Row("dotNET", 2012) :: Row("Java", 2012) :: Nil)
+
+    checkAnswer(
+      sql("SELECT min_by(x, y) FROM VALUES (('a', 10)), (('b', 50)), (('c', 20)) AS tab(x, y)"),
+      Row("a") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT min_by(x, y) FROM VALUES (('a', 10)), (('b', null)), (('c', 20)) AS tab(x, y)"),
+      Row("a") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT min_by(x, y) FROM VALUES (('a', null)), (('b', null)), (('c', 20)) AS tab(x, y)"),
+      Row("c") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT min_by(x, y) FROM VALUES (('a', 10)), (('b', 50)), (('c', null)) AS tab(x, y)"),
+      Row("a") :: Nil
+    )
+
+    checkAnswer(
+      sql("SELECT min_by(x, y) FROM VALUES (('a', null)), (('b', null)) AS tab(x, y)"),
+      Row(null) :: Nil
+    )
+
+    // structs as ordering value.
+    checkAnswer(
+      sql("select min_by(x, y) FROM VALUES (('a', (10, 20))), (('b', (10, 50))), " +
+        "(('c', (10, 60))) AS tab(x, y)"),
+      Row("a") :: Nil
+    )
+
+    checkAnswer(
+      sql("select min_by(x, y) FROM VALUES (('a', null)), (('b', (10, 50))), " +
+        "(('c', (10, 60))) AS tab(x, y)"),
+      Row("b") :: Nil
+    )
+
+    withTempView("tempView") {
+      val dfWithMap = Seq((0, "a"), (1, "b"), (2, "c"))
+        .toDF("x", "y")
+        .select($"x", map($"x", $"y").as("y"))
+        .createOrReplaceTempView("tempView")
+      val error = intercept[AnalysisException] {
+        sql("SELECT min_by(x, y) FROM tempView").show
+      }
+      assert(
+        error.message.contains("function min_by does not support ordering on type map<int,string>"))
+    }
+  }
+
+  test("count_if") {
+    withTempView("tempView") {
+      Seq(("a", None), ("a", Some(1)), ("a", Some(2)), ("a", Some(3)),
+        ("b", None), ("b", Some(4)), ("b", Some(5)), ("b", Some(6)))
+        .toDF("x", "y")
+        .createOrReplaceTempView("tempView")
+
+      checkAnswer(
+        sql("SELECT COUNT_IF(NULL), COUNT_IF(y % 2 = 0), COUNT_IF(y % 2 <> 0), " +
+          "COUNT_IF(y IS NULL) FROM tempView"),
+        Row(0L, 3L, 3L, 2L))
+
+      checkAnswer(
+        sql("SELECT x, COUNT_IF(NULL), COUNT_IF(y % 2 = 0), COUNT_IF(y % 2 <> 0), " +
+          "COUNT_IF(y IS NULL) FROM tempView GROUP BY x"),
+        Row("a", 0L, 1L, 2L, 1L) :: Row("b", 0L, 2L, 1L, 1L) :: Nil)
+
+      checkAnswer(
+        sql("SELECT x FROM tempView GROUP BY x HAVING COUNT_IF(y % 2 = 0) = 1"),
+        Row("a"))
+
+      checkAnswer(
+        sql("SELECT x FROM tempView GROUP BY x HAVING COUNT_IF(y % 2 = 0) = 2"),
+        Row("b"))
+
+      checkAnswer(
+        sql("SELECT x FROM tempView GROUP BY x HAVING COUNT_IF(y IS NULL) > 0"),
+        Row("a") :: Row("b") :: Nil)
+
+      checkAnswer(
+        sql("SELECT x FROM tempView GROUP BY x HAVING COUNT_IF(NULL) > 0"),
+        Nil)
+
+      val error = intercept[AnalysisException] {
+        sql("SELECT COUNT_IF(x) FROM tempView")
+      }
+      assert(error.message.contains("function count_if requires boolean type"))
+    }
+  }
+
+  Seq(true, false).foreach { value =>
+    test(s"SPARK-31620: agg with subquery (whole-stage-codegen = $value)") {
+      withSQLConf(SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> value.toString) {
+        withTempView("t1", "t2") {
+          sql("create temporary view t1 as select * from values (1, 2) as t1(a, b)")
+          sql("create temporary view t2 as select * from values (3, 4) as t2(c, d)")
+
+          // test without grouping keys
+          checkAnswer(sql("select sum(if(c > (select a from t1), d, 0)) as csum from t2"),
+            Row(4) :: Nil)
+
+          // test with grouping keys
+          checkAnswer(sql("select c, sum(if(c > (select a from t1), d, 0)) as csum from " +
+            "t2 group by c"), Row(3, 4) :: Nil)
+
+          // test with distinct
+          checkAnswer(sql("select avg(distinct(d)), sum(distinct(if(c > (select a from t1)," +
+            " d, 0))) as csum from t2 group by c"), Row(4, 4) :: Nil)
+
+          // test subquery with agg
+          checkAnswer(sql("select sum(distinct(if(c > (select sum(distinct(a)) from t1)," +
+            " d, 0))) as csum from t2 group by c"), Row(4) :: Nil)
+
+          // test SortAggregateExec
+          var df = sql("select max(if(c > (select a from t1), 'str1', 'str2')) as csum from t2")
+          assert(df.queryExecution.executedPlan
+            .find { case _: SortAggregateExec => true }.isDefined)
+          checkAnswer(df, Row("str1") :: Nil)
+
+          // test ObjectHashAggregateExec
+          df = sql("select collect_list(d), sum(if(c > (select a from t1), d, 0)) as csum from t2")
+          assert(df.queryExecution.executedPlan
+            .find { case _: ObjectHashAggregateExec => true }.isDefined)
+          checkAnswer(df, Row(Array(4), 4) :: Nil)
+        }
+      }
+    }
+  }
 }
