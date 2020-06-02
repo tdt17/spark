@@ -15,16 +15,17 @@
 # limitations under the License.
 #
 
-FROM palantirtechnologies/circle-spark-base
+FROM palantirtechnologies/circle-spark-base:0.2.3
 
+# Install R and SparkR dependencies
+RUN $CONDA_BIN install --yes --channel r \
+    r-base=3.4.3 r-knitr r-rmarkdown r-e1071 r-survival r-testthat r-lintr r-roxygen2 r-devtools
+
+# Install qpdf (used for SparkR documentation, required in R tests)
 USER root
-
-### Install R
-RUN apt-get update \
-  && apt-get install r-base r-base-dev qpdf \
-  && rm -rf /var/lib/apt/lists/* \
-  && chmod 777 /usr/local/lib/R/site-library \
-  && /usr/lib/R/bin/R -e "install.packages(c('devtools'), repos='http://cran.us.r-project.org', lib='/usr/local/lib/R/site-library'); devtools::install_github('r-lib/testthat@v2.0.0', lib='/usr/local/lib/R/site-library'); install.packages(c('knitr', 'rmarkdown', 'e1071', 'survival', 'roxygen2', 'lintr'), repos='http://cran.us.r-project.org', lib='/usr/local/lib/R/site-library')"
-ENV R_HOME=/usr/lib/R
-
+RUN apt-get update && apt-get install qpdf
 USER circleci
+
+# Add conda-installed R to path
+ENV PATH="$CONDA_ROOT/bin:$PATH"
+ENV R_HOME=$CONDA_ROOT/lib/R
