@@ -1012,7 +1012,7 @@ class Column(val expr: Expression) extends Logging {
    * @since 2.0.0
    */
   def name(alias: String): Column = withExpr {
-    Alias(expr, alias)()
+    Alias(normalizedExpr(), alias)()
   }
 
   /**
