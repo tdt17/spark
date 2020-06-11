@@ -17,34 +17,15 @@
 
 package org.apache.spark.sql.execution.aggregate
 
-import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Final, PartialMerge}
-import org.apache.spark.sql.execution.{ExplainUtils, UnaryExecNode}
+import org.apache.spark.sql.execution.UnaryExecNode
 
 /**
  * Holds common logic for aggregate operators
  */
 trait BaseAggregateExec extends UnaryExecNode {
-  def groupingExpressions: Seq[NamedExpression]
   def aggregateExpressions: Seq[AggregateExpression]
-  def aggregateAttributes: Seq[Attribute]
-  def resultExpressions: Seq[NamedExpression]
-
-  override def verboseStringWithOperatorId(): String = {
-    val inputString = child.output.mkString("[", ", ", "]")
-    val keyString = groupingExpressions.mkString("[", ", ", "]")
-    val functionString = aggregateExpressions.mkString("[", ", ", "]")
-    val aggregateAttributeString = aggregateAttributes.mkString("[", ", ", "]")
-    val resultString = resultExpressions.mkString("[", ", ", "]")
-    s"""
-       |(${ExplainUtils.getOpId(this)}) $nodeName ${ExplainUtils.getCodegenId(this)}
-       |Input: $inputString
-       |Keys: $keyString
-       |Functions: $functionString
-       |Aggregate Attributes: $aggregateAttributeString
-       |Results: $resultString
-     """.stripMargin
-  }
 
   protected def inputAttributes: Seq[Attribute] = {
     val modes = aggregateExpressions.map(_.mode).distinct
