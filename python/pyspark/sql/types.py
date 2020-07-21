@@ -1694,10 +1694,20 @@ def from_arrow_schema(arrow_schema):
 def _infer_binary_columns_as_arrow_string(schema, pandas_df):
     import pandas as pd
     import pyarrow as pa
+    import six
 
     for field_index, field in enumerate(schema):
-        if field.type == pa.binary() and \
-                pd.api.types.is_string_dtype(pandas_df.iloc[:, field_index]):
+        if not field.type == pa.binary():
+            continue
+
+        inferred_dtype = pd.api.types.infer_dtype(pandas_df.iloc[:, field_index], skipna=True)
+        if inferred_dtype == 'string':
+            is_string_column = True
+        elif inferred_dtype == 'mixed' and len(pandas_df.index) > 0:
+            first_value = pandas_df.iloc[0, field_index]
+            is_string_column = isinstance(first_value, six.string_types)
+
+        if is_string_column:
             field_as_string = pa.field(field.name, pa.string())
             schema = schema.set(field_index, field_as_string)
 
