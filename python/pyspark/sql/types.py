@@ -1697,7 +1697,7 @@ def _infer_binary_columns_as_arrow_string(schema, pandas_df):
 
     for field_index, field in enumerate(schema):
         if field.type == pa.binary() and \
-                pd.api.types.infer_dtype(pandas_df.iloc[:, field_index], skipna=True) == "string":
+                pd.api.types.is_string_dtype(pandas_df.iloc[:, field_index]):
             field_as_string = pa.field(field.name, pa.string())
             schema = schema.set(field_index, field_as_string)
 
