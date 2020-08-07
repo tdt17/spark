@@ -107,16 +107,7 @@ private[spark] class ExecutorPodsAllocator(
     val currentTime = clock.getTimeMillis()
     val timedOut = newlyCreatedExecutors.flatMap { case (execId, timeCreated) =>
       if (currentTime - timeCreated > podCreationTimeout) {
-//        TODO(jcasale): wtf is going on here?
-//        safeLogWarning("Executor was not detected in the Kubernetes" +
-//          " cluster after timeout despite the fact that a" +
-//          " previous allocation attempt tried to create it. The executor may have been" +
-//          " deleted but the application missed the deletion event.",
-//          SafeArg.of("executorId", execId),
-//          SafeArg.of("podCreationTimeoutMs", podCreationTimeout))
-        Some(execId)
-      } else {
-        safeLogDebug("Executor was not detected in the Kubernetes" +
+        safeLogWarning("Executor was not detected in the Kubernetes" +
           " cluster after timeout despite the fact that a" +
           " previous allocation attempt tried to create it. The executor may have been" +
           " deleted but the application missed the deletion event.",

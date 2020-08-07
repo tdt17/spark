@@ -701,66 +701,51 @@ class ExecutorAllocationManagerSuite extends SparkFunSuite {
     assert(firstAddTime !== secondAddTime)
   }
 
-  test("starting remove timers with cached/shuffle data") {
-    val minExecutors = 1
-    val initialExecutors = 1
-    val maxExecutors = 2
-    val conf = new SparkConf()
-      .set("spark.dynamicAllocation.enabled", "true")
-      .set("spark.dynamicAllocation.minExecutors", minExecutors.toString)
-      .set("spark.dynamicAllocation.maxExecutors", maxExecutors.toString)
-      .set("spark.dynamicAllocation.initialExecutors", initialExecutors.toString)
-      .set("spark.dynamicAllocation.schedulerBacklogTimeout", "1000ms")
-      .set("spark.dynamicAllocation.sustainedSchedulerBacklogTimeout", "1000ms")
-      .set("spark.dynamicAllocation.executorIdleTimeout", s"${executorIdleTimeout}s")
-      .set("spark.dynamicAllocation.cachedExecutorIdleTimeout", s"${cachedExecutorIdleTimeout}s")
-      .set("spark.dynamicAllocation.inactiveShuffleExecutorIdleTimeout",
-          s"${inactiveShuffleExecutorIdleTimeout}s")
-    val mockAllocationClient = mock(classOf[ExecutorAllocationClient])
-    val mockMOTM = mock(classOf[MapOutputTrackerMaster])
-    val mockBMM = mock(classOf[BlockManagerMaster])
-    val manager = new ExecutorAllocationManager(
-      mockAllocationClient, mock(classOf[LiveListenerBus]), conf, mockMOTM, mockBMM)
-    val clock = new ManualClock()
+  test("starting/canceling remove timers") {
+    sc = createSparkContext(2, 10, 2)
+    val clock = new ManualClock(14444L)
+    val manager = sc.executorAllocationManager.get
     manager.setClock(clock)
 
-    // 1. No cache or shuffle data => gets normal timeout.
-    when(mockBMM.hasCachedBlocks("executor-1")).thenReturn(false)
-    when(mockMOTM.hasOutputsOnExecutor("executor-1")).thenReturn(false)
-    when(mockMOTM.hasOutputsOnExecutor("executor-1", activeOnly = true)).thenReturn(false)
-    onExecutorAdded(manager, "executor-1")
-    onExecutorIdle(manager, "executor-1")
-    assert(removeTimes(manager).contains("executor-1"))
-    assert(removeTimes(manager)("executor-1") ===
-      clock.getTimeMillis() + executorIdleTimeout * 1000)
+    executorIds(manager).asInstanceOf[mutable.Set[String]] ++= List("1", "2", "3")
 
-    // 2. Cached data => gets cached executor timeout.
-    when(mockBMM.hasCachedBlocks("executor-2")).thenReturn(true)
-    when(mockMOTM.hasOutputsOnExecutor("executor-2")).thenReturn(false)
-    when(mockMOTM.hasOutputsOnExecutor("executor-2", activeOnly = true)).thenReturn(false)
-    onExecutorAdded(manager, "executor-2")
-    onExecutorIdle(manager, "executor-2")
-    assert(removeTimes(manager).contains("executor-2"))
-    assert(removeTimes(manager)("executor-2") ===
-      clock.getTimeMillis() + cachedExecutorIdleTimeout * 1000)
+    // Starting remove timer is idempotent for each executor
+    assert(removeTimes(manager).isEmpty)
+    onExecutorIdle(manager, "1")
+    assert(removeTimes(manager).size === 1)
+    assert(removeTimes(manager).contains("1"))
+    val firstRemoveTime = removeTimes(manager)("1")
+    assert(firstRemoveTime === clock.getTimeMillis + executorIdleTimeout * 1000)
+    clock.advance(100L)
+    onExecutorIdle(manager, "1")
+    assert(removeTimes(manager)("1") === firstRemoveTime) // timer is already started
+    clock.advance(200L)
+    onExecutorIdle(manager, "1")
+    assert(removeTimes(manager)("1") === firstRemoveTime)
+    clock.advance(300L)
+    onExecutorIdle(manager, "2")
+    assert(removeTimes(manager)("2") !== firstRemoveTime) // different executor
+    assert(removeTimes(manager)("2") === clock.getTimeMillis + executorIdleTimeout * 1000)
+    clock.advance(400L)
+    onExecutorIdle(manager, "3")
+    assert(removeTimes(manager)("3") !== firstRemoveTime)
+    assert(removeTimes(manager)("3") === clock.getTimeMillis + executorIdleTimeout * 1000)
+    assert(removeTimes(manager).size === 3)
+    assert(removeTimes(manager).contains("2"))
+    assert(removeTimes(manager).contains("3"))
 
-    // 3. Inactive shuffle data => gets inactive shuffle executor timeout.
-    when(mockBMM.hasCachedBlocks("executor-3")).thenReturn(false)
-    when(mockMOTM.hasOutputsOnExecutor("executor-3")).thenReturn(true)
-    when(mockMOTM.hasOutputsOnExecutor("executor-3", activeOnly = true)).thenReturn(false)
-    onExecutorAdded(manager, "executor-3")
-    onExecutorIdle(manager, "executor-3")
-    assert(removeTimes(manager).contains("executor-3"))
-    assert(removeTimes(manager)("executor-3") ===
-      clock.getTimeMillis() + inactiveShuffleExecutorIdleTimeout * 1000)
-
-    // 4. Active shuffle data => not scheduled for removal.
-    when(mockBMM.hasCachedBlocks("executor-4")).thenReturn(false)
-    when(mockMOTM.hasOutputsOnExecutor("executor-4")).thenReturn(true)
-    when(mockMOTM.hasOutputsOnExecutor("executor-4", activeOnly = true)).thenReturn(true)
-    onExecutorAdded(manager, "executor-4")
-    onExecutorIdle(manager, "executor-4")
-    assert(!removeTimes(manager).contains("executor-4"))
+    // Restart remove timer
+    clock.advance(1000L)
+    onExecutorBusy(manager, "1")
+    assert(removeTimes(manager).size === 2)
+    onExecutorIdle(manager, "1")
+    assert(removeTimes(manager).size === 3)
+    assert(removeTimes(manager).contains("1"))
+    val secondRemoveTime = removeTimes(manager)("1")
+    assert(secondRemoveTime === clock.getTimeMillis + executorIdleTimeout * 1000)
+    assert(removeTimes(manager)("1") === secondRemoveTime) // timer is already started
+    assert(removeTimes(manager)("1") !== firstRemoveTime)
+    assert(firstRemoveTime !== secondRemoveTime)
   }
 
   test("mock polling loop with no events") {
@@ -1124,25 +1109,22 @@ class ExecutorAllocationManagerSuite extends SparkFunSuite {
   }
 
   test("SPARK-23365 Don't update target num executors when killing idle executors") {
-//    TODO(jcasale): support dynamic allocation without external shuffle service (#427)
-//    is this necessary?
-//    val minExecutors = 1
-//    val initialExecutors = 1
-//    val maxExecutors = 2
-//    val conf = new SparkConf()
-//      .set(config.DYN_ALLOCATION_ENABLED, true)
-//      .set(config.SHUFFLE_SERVICE_ENABLED, true)
-//      .set(config.DYN_ALLOCATION_MIN_EXECUTORS, minExecutors)
-//      .set(config.DYN_ALLOCATION_MAX_EXECUTORS, maxExecutors)
-//      .set(config.DYN_ALLOCATION_INITIAL_EXECUTORS, initialExecutors)
-//      .set(config.DYN_ALLOCATION_SCHEDULER_BACKLOG_TIMEOUT.key, "1000ms")
-//      .set(config.DYN_ALLOCATION_SUSTAINED_SCHEDULER_BACKLOG_TIMEOUT.key, "1000ms")
-//      .set(config.DYN_ALLOCATION_EXECUTOR_IDLE_TIMEOUT.key, "3000ms")
-//    val mockAllocationClient = mock(classOf[ExecutorAllocationClient])
-//    val mockMOTM = mock(classOf[MapOutputTrackerMaster])
-//    val mockBMM = mock(classOf[BlockManagerMaster])
-//    val manager = new ExecutorAllocationManager(
-//      mockAllocationClient, mock(classOf[LiveListenerBus]), conf, mockMOTM, mockBMM)
+    val minExecutors = 1
+    val initialExecutors = 1
+    val maxExecutors = 2
+    val conf = new SparkConf()
+      .set("spark.dynamicAllocation.enabled", "true")
+      .set(config.SHUFFLE_SERVICE_ENABLED.key, "true")
+      .set("spark.dynamicAllocation.minExecutors", minExecutors.toString)
+      .set("spark.dynamicAllocation.maxExecutors", maxExecutors.toString)
+      .set("spark.dynamicAllocation.initialExecutors", initialExecutors.toString)
+      .set("spark.dynamicAllocation.schedulerBacklogTimeout", "1000ms")
+      .set("spark.dynamicAllocation.sustainedSchedulerBacklogTimeout", "1000ms")
+      .set("spark.dynamicAllocation.executorIdleTimeout", s"3000ms")
+    val mockAllocationClient = mock(classOf[ExecutorAllocationClient])
+    val mockBMM = mock(classOf[BlockManagerMaster])
+    val manager = new ExecutorAllocationManager(
+      mockAllocationClient, mock(classOf[LiveListenerBus]), conf, mockBMM)
     val clock = new ManualClock()
     val manager = createManager(
       createConf(1, 2, 1).set(config.DYN_ALLOCATION_TESTING, false),
@@ -1277,8 +1259,6 @@ private object ExecutorAllocationManagerSuite extends PrivateMethodTester {
   private val schedulerBacklogTimeout = 1L
   private val sustainedSchedulerBacklogTimeout = 2L
   private val executorIdleTimeout = 3L
-  private val cachedExecutorIdleTimeout = 4L
-  private val inactiveShuffleExecutorIdleTimeout = 5L
 
   private def createStageInfo(
       stageId: Int,
