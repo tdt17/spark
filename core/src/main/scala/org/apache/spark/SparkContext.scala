@@ -44,9 +44,8 @@ import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.api.conda.CondaEnvironment
 import org.apache.spark.api.conda.CondaEnvironment.CondaSetupInstructions
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.deploy.{LocalSparkCluster, SparkHadoopUtil}
-import org.apache.spark.executor.{ExecutorMetrics, ExecutorMetricsSource}
 import org.apache.spark.deploy.{CondaRunner, LocalSparkCluster, SparkHadoopUtil}
+import org.apache.spark.executor.{ExecutorMetrics, ExecutorMetricsSource}
 import org.apache.spark.input.{FixedLengthBinaryInputFormat, PortableDataStream, StreamInputFormat, WholeTextFileInputFormat}
 import org.apache.spark.internal.SafeLogging
 import org.apache.spark.internal.config._
@@ -1859,64 +1858,66 @@ class SparkContext(config: SparkConf) extends SafeLogging {
 
     if (path == null) {
       safeLogWarning("null specified as parameter to addJar")
-    def checkRemoteJarFile(path: String): String = {
-      val hadoopPath = new Path(path)
-      val scheme = hadoopPath.toUri.getScheme
-      if (!Array("http", "https", "ftp").contains(scheme)) {
-        try {
-          val fs = hadoopPath.getFileSystem(hadoopConfiguration)
-          if (!fs.exists(hadoopPath)) {
-            throw new FileNotFoundException(s"Jar ${path} not found")
-          }
-          if (fs.isDirectory(hadoopPath)) {
-            throw new IllegalArgumentException(
-              s"Directory ${path} is not allowed for addJar")
-          }
-          path
-        } catch {
-          case NonFatal(e) =>
-            logError(s"Failed to add $path to Spark environment", e)
-            null
-        }
-      } else {
-        path
-      }
-    }
 
-    if (path == null || path.isEmpty) {
-      logWarning("null or empty path specified as parameter to addJar")
-    } else {
-      val key = if (path.contains("\\")) {
-        // For local paths with backslashes on Windows, URI throws an exception
-        addLocalJarFile(new File(path))
-      } else {
-        val uri = new Path(path).toUri
-        // SPARK-17650: Make sure this is a valid URL before adding it to the list of dependencies
-        Utils.validateURL(uri)
-        uri.getScheme match {
-          // A JAR file which exists only on the driver node
-          case null =>
-            // SPARK-22585 path without schema is not url encoded
-            addLocalJarFile(new File(uri.getPath))
-          // A JAR file which exists only on the driver node
-          case "file" => addLocalJarFile(new File(uri.getPath))
-          // A JAR file which exists locally on every worker node
-          case "local" => "file:" + uri.getPath
-          case _ => checkRemoteJarFile(path)
+      def checkRemoteJarFile(path: String): String = {
+        val hadoopPath = new Path(path)
+        val scheme = hadoopPath.toUri.getScheme
+        if (!Array("http", "https", "ftp").contains(scheme)) {
+          try {
+            val fs = hadoopPath.getFileSystem(hadoopConfiguration)
+            if (!fs.exists(hadoopPath)) {
+              throw new FileNotFoundException(s"Jar ${path} not found")
+            }
+            if (fs.isDirectory(hadoopPath)) {
+              throw new IllegalArgumentException(
+                s"Directory ${path} is not allowed for addJar")
+            }
+            path
+          } catch {
+            case NonFatal(e) =>
+              safeLogError("Failed to add path to Spark environment", UnsafeArg.of("path", path))
+              null
+          }
+        } else {
+          path
         }
       }
-      if (key != null) {
-        val timestamp = System.currentTimeMillis
-        if (addedJars.putIfAbsent(key, timestamp).isEmpty) {
-          safeLogInfo("Added JAR",
-            UnsafeArg.of("path", path),
-            UnsafeArg.of("key", key),
-            SafeArg.of("timestamp", timestamp))
-          postEnvironmentUpdate()
+
+      if (path == null || path.isEmpty) {
+        safeLogWarning("null or empty path specified as parameter to addJar")
+      } else {
+        val key = if (path.contains("\\")) {
+          // For local paths with backslashes on Windows, URI throws an exception
+          addLocalJarFile(new File(path))
         } else {
-          safeLogWarning("The jar has been added already. Overwriting of added jars " +
-            "is not supported in the current version.",
-            UnsafeArg.of("path", path))
+          val uri = new Path(path).toUri
+          // SPARK-17650: Make sure this is a valid URL before adding it to the list of dependencies
+          Utils.validateURL(uri)
+          uri.getScheme match {
+            // A JAR file which exists only on the driver node
+            case null =>
+              // SPARK-22585 path without schema is not url encoded
+              addLocalJarFile(new File(uri.getPath))
+            // A JAR file which exists only on the driver node
+            case "file" => addLocalJarFile(new File(uri.getPath))
+            // A JAR file which exists locally on every worker node
+            case "local" => "file:" + uri.getPath
+            case _ => checkRemoteJarFile(path)
+          }
+        }
+        if (key != null) {
+          val timestamp = System.currentTimeMillis
+          if (addedJars.putIfAbsent(key, timestamp).isEmpty) {
+            safeLogInfo("Added JAR",
+              UnsafeArg.of("path", path),
+              UnsafeArg.of("key", key),
+              SafeArg.of("timestamp", timestamp))
+            postEnvironmentUpdate()
+          } else {
+            safeLogWarning("The jar has been added already. Overwriting of added jars " +
+              "is not supported in the current version.",
+              UnsafeArg.of("path", path))
+          }
         }
       }
     }
@@ -2893,7 +2894,7 @@ object SparkContext extends SafeLogging {
       }
       if(!shouldCheckExecCores && Utils.isDynamicAllocationEnabled(sc.conf)) {
         // if we can't rely on the executor cores config throw a warning for user
-        logWarning("Please ensure that the number of slots available on your " +
+        safeLogWarning("Please ensure that the number of slots available on your " +
           "executors is limited by the number of cores to task cpus and not another " +
           "custom resource. If cores is not the limiting resource then dynamic " +
           "allocation will not work properly!")
@@ -2918,7 +2919,8 @@ object SparkContext extends SafeLogging {
           if (Utils.isTesting) {
             throw new SparkException(message)
           } else {
-            logWarning(message)
+//            TODO(@jcasale) fix this logging
+            safeLogWarning(message)
           }
         }
       }
