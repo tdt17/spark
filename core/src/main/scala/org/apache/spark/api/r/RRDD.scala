@@ -50,7 +50,7 @@ private abstract class BaseRRDD[T: ClassTag, U: ClassTag](
   override def getPartitions: Array[Partition] = parent.partitions
 
   override def compute(partition: Partition, context: TaskContext): Iterator[U] = {
-    val runner = new RRunner[U](
+    val runner = new RRunner[T, U](
       func, deserializer, serializer, packageNames, broadcastVars, condaInstructions, numPartitions)
 
     // The parent may be also an RRDD, so we should launch it first.

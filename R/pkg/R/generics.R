@@ -528,6 +528,9 @@ setGeneric("persist", function(x, newLevel) { standardGeneric("persist") })
 #' @rdname printSchema
 setGeneric("printSchema", function(x) { standardGeneric("printSchema") })
 
+#' @rdname registerTempTable-deprecated
+setGeneric("registerTempTable", function(x, tableName) { standardGeneric("registerTempTable") })
+
 #' @rdname rename
 setGeneric("rename", function(x, ...) { standardGeneric("rename") })
 
@@ -1149,6 +1152,10 @@ setGeneric("ntile", function(x) { standardGeneric("ntile") })
 #' @name NULL
 setGeneric("n_distinct", function(x, ...) { standardGeneric("n_distinct") })
 
+#' @rdname column_string_functions
+#' @name NULL
+setGeneric("overlay", function(x, replace, pos, ...) { standardGeneric("overlay") })
+
 #' @rdname column_window_functions
 #' @name NULL
 setGeneric("percent_rank", function(x = "missing") { standardGeneric("percent_rank") })
@@ -1393,6 +1400,10 @@ setGeneric("weekofyear", function(x) { standardGeneric("weekofyear") })
 #' @rdname column_datetime_functions
 #' @name NULL
 setGeneric("window", function(x, ...) { standardGeneric("window") })
+
+#' @rdname column_misc_functions
+#' @name NULL
+setGeneric("xxhash64", function(x, ...) { standardGeneric("xxhash64") })
 
 #' @rdname column_datetime_functions
 #' @name NULL

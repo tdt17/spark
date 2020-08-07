@@ -17,8 +17,6 @@
 
 package org.apache.spark.ml.feature
 
-import scala.language.existentials
-
 import org.apache.hadoop.fs.Path
 
 import org.apache.spark.SparkException
@@ -31,6 +29,8 @@ import org.apache.spark.ml.util._
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.util.ThreadUtils
+import org.apache.spark.util.VersionUtils.majorMinorVersion
 import org.apache.spark.util.collection.OpenHashMap
 
 /**
@@ -90,9 +90,27 @@ private[feature] trait StringIndexerBase extends Params with HasHandleInvalid wi
     val outputColName = $(outputCol)
     require(inputFields.forall(_.name != outputColName),
       s"Output column $outputColName already exists.")
-    val attr = NominalAttribute.defaultAttr.withName($(outputCol))
-    val outputFields = inputFields :+ attr.toStructField()
-    StructType(outputFields)
+    NominalAttribute.defaultAttr.withName(outputColName).toStructField()
+  }
+
+  /** Validates and transforms the input schema. */
+  protected def validateAndTransformSchema(
+      schema: StructType,
+      skipNonExistsCol: Boolean = false): StructType = {
+    val (inputColNames, outputColNames) = getInOutCols()
+
+    require(outputColNames.distinct.length == outputColNames.length,
+      s"Output columns should not be duplicate.")
+
+    val outputFields = inputColNames.zip(outputColNames).flatMap {
+      case (inputColName, outputColName) =>
+        schema.fieldNames.contains(inputColName) match {
+          case true => Some(validateAndTransformField(schema, inputColName, outputColName))
+          case false if skipNonExistsCol => None
+          case _ => throw new SparkException(s"Input column $inputColName does not exist.")
+        }
+    }
+    StructType(schema.fields ++ outputFields)
   }
 }
 
@@ -130,21 +148,85 @@ class StringIndexer @Since("1.4.0") (
   @Since("1.4.0")
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
+  /** @group setParam */
+  @Since("3.0.0")
+  def setInputCols(value: Array[String]): this.type = set(inputCols, value)
+
+  /** @group setParam */
+  @Since("3.0.0")
+  def setOutputCols(value: Array[String]): this.type = set(outputCols, value)
+
+  /**
+   * Gets columns from dataset. If a column is not string type, we replace NaN values
+   * with null. Columns are casted to string type.
+   */
+  private def getSelectedCols(dataset: Dataset[_], inputCols: Seq[String]): Seq[Column] = {
+    inputCols.map { colName =>
+      val col = dataset.col(colName)
+      if (col.expr.dataType == StringType) {
+        col
+      } else {
+        // We don't count for NaN values. Because `StringIndexerAggregator` only processes strings,
+        // we replace NaNs with null in advance.
+        new Column(If(col.isNaN.expr, Literal(null), col.expr)).cast(StringType)
+      }
+    }
+  }
+
+  private def countByValue(
+      dataset: Dataset[_],
+      inputCols: Array[String]): Array[OpenHashMap[String, Long]] = {
+
+    val aggregator = new StringIndexerAggregator(inputCols.length)
+    implicit val encoder = Encoders.kryo[Array[OpenHashMap[String, Long]]]
+
+    val selectedCols = getSelectedCols(dataset, inputCols)
+    dataset.select(selectedCols: _*)
+      .toDF
+      .groupBy().agg(aggregator.toColumn)
+      .as[Array[OpenHashMap[String, Long]]]
+      .collect()(0)
+  }
+
+  private def sortByFreq(dataset: Dataset[_], ascending: Boolean): Array[Array[String]] = {
+    val (inputCols, _) = getInOutCols()
+
+    val sortFunc = StringIndexer.getSortFunc(ascending = ascending)
+    val orgStrings = countByValue(dataset, inputCols).toSeq
+    ThreadUtils.parmap(orgStrings, "sortingStringLabels", 8) { counts =>
+      counts.toSeq.sortWith(sortFunc).map(_._1).toArray
+    }.toArray
+  }
+
+  private def sortByAlphabet(dataset: Dataset[_], ascending: Boolean): Array[Array[String]] = {
+    val (inputCols, _) = getInOutCols()
+
+    val selectedCols = getSelectedCols(dataset, inputCols).map(collect_set(_))
+    val allLabels = dataset.select(selectedCols: _*)
+      .collect().toSeq.flatMap(_.toSeq).asInstanceOf[Seq[Seq[String]]]
+    ThreadUtils.parmap(allLabels, "sortingStringLabels", 8) { labels =>
+      val sorted = labels.filter(_ != null).sorted
+      if (ascending) {
+        sorted.toArray
+      } else {
+        sorted.reverse.toArray
+      }
+    }.toArray
+  }
+
   @Since("2.0.0")
   override def fit(dataset: Dataset[_]): StringIndexerModel = {
     transformSchema(dataset.schema, logging = true)
-    val values = dataset.na.drop(Array($(inputCol)))
-      .select(col($(inputCol)).cast(StringType))
-      .rdd.map(_.getString(0))
-    val labels = $(stringOrderType) match {
-      case StringIndexer.frequencyDesc => values.countByValue().toSeq.sortBy(-_._2)
-        .map(_._1).toArray
-      case StringIndexer.frequencyAsc => values.countByValue().toSeq.sortBy(_._2)
-        .map(_._1).toArray
-      case StringIndexer.alphabetDesc => values.distinct.collect.sortWith(_ > _)
-      case StringIndexer.alphabetAsc => values.distinct.collect.sortWith(_ < _)
-    }
-    copyValues(new StringIndexerModel(uid, labels).setParent(this))
+
+    // In case of equal frequency when frequencyDesc/Asc, the strings are further sorted
+    // alphabetically.
+    val labelsArray = $(stringOrderType) match {
+      case StringIndexer.frequencyDesc => sortByFreq(dataset, ascending = false)
+      case StringIndexer.frequencyAsc => sortByFreq(dataset, ascending = true)
+      case StringIndexer.alphabetDesc => sortByAlphabet(dataset, ascending = false)
+      case StringIndexer.alphabetAsc => sortByAlphabet(dataset, ascending = true)
+     }
+    copyValues(new StringIndexerModel(uid, labelsArray).setParent(this))
   }
 
   @Since("1.4.0")
@@ -262,6 +344,48 @@ class StringIndexerModel (
         }
       }
     }.asNondeterministic()
+  }
+
+  @Since("2.0.0")
+  override def transform(dataset: Dataset[_]): DataFrame = {
+    transformSchema(dataset.schema, logging = true)
+
+    val (inputColNames, outputColNames) = getInOutCols()
+    val outputColumns = new Array[Column](outputColNames.length)
+
+    // Skips invalid rows if `handleInvalid` is set to `StringIndexer.SKIP_INVALID`.
+    val filteredDataset = if (getHandleInvalid == StringIndexer.SKIP_INVALID) {
+      filterInvalidData(dataset, inputColNames)
+    } else {
+      dataset
+    }
+
+    for (i <- 0 until outputColNames.length) {
+      val inputColName = inputColNames(i)
+      val outputColName = outputColNames(i)
+      val labelToIndex = labelsToIndexArray(i)
+      val labels = labelsArray(i)
+
+      if (!dataset.schema.fieldNames.contains(inputColName)) {
+        logWarning(s"Input column ${inputColName} does not exist during transformation. " +
+          "Skip StringIndexerModel for this column.")
+        outputColNames(i) = null
+      } else {
+        val filteredLabels = getHandleInvalid match {
+          case StringIndexer.KEEP_INVALID => labels :+ "__unknown"
+          case _ => labels
+        }
+        val metadata = NominalAttribute.defaultAttr
+          .withName(outputColName)
+          .withValues(filteredLabels)
+          .toMetadata()
+
+        val indexer = getIndexer(labels, labelToIndex)
+
+        outputColumns(i) = indexer(dataset(inputColName).cast(StringType))
+          .as(outputColName, metadata)
+      }
+    }
 
     filteredDataset.select(col("*"),
       indexer(dataset($(inputCol)).cast(StringType)).as($(outputCol), metadata))
@@ -285,6 +409,14 @@ class StringIndexerModel (
 
   @Since("1.6.0")
   override def write: StringIndexModelWriter = new StringIndexModelWriter(this)
+
+  @Since("3.0.0")
+  override def toString: String = {
+    s"StringIndexerModel: uid=$uid, handleInvalid=${$(handleInvalid)}" +
+      get(stringOrderType).map(t => s", stringOrderType=$t").getOrElse("") +
+      get(inputCols).map(c => s", numInputCols=${c.length}").getOrElse("") +
+      get(outputCols).map(c => s", numOutputCols=${c.length}").getOrElse("")
+  }
 }
 
 @Since("1.6.0")

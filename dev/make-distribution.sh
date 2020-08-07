@@ -40,6 +40,7 @@ NAME=none
 MVN="$SPARK_HOME/build/mvn"
 
 function exit_with_usage {
+  set +x
   echo "make-distribution.sh - tool for making binary distributions of Spark"
   echo ""
   echo "usage:"
@@ -161,7 +162,7 @@ fi
 # Build uber fat JAR
 cd "$SPARK_HOME"
 
-export MAVEN_OPTS="${MAVEN_OPTS:--Xmx2g -XX:ReservedCodeCacheSize=512m}"
+export MAVEN_OPTS="${MAVEN_OPTS:--Xmx2g -XX:ReservedCodeCacheSize=1g}"
 
 if [[ $CLEAN == true ]]; then
   MAYBE_CLEAN="clean"
@@ -244,7 +245,7 @@ if [ "$MAKE_PIP" == "true" ]; then
   pushd "$SPARK_HOME/python" > /dev/null
   # Delete the egg info file if it exists, this can cache older setup files.
   rm -rf pyspark.egg-info || echo "No existing egg info file, skipping deletion"
-  python setup.py sdist
+  python3 setup.py sdist
   popd > /dev/null
 else
   echo "Skipping building python distribution package"

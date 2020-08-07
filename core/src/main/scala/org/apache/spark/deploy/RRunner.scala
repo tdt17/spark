@@ -31,6 +31,7 @@ import org.apache.spark.api.r.{RBackend, RUtils}
 import org.apache.spark.deploy.Common.Provenance
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config.R._
+import org.apache.spark.internal.config.SUBMIT_DEPLOY_MODE
 import org.apache.spark.util.RedirectThread
 
 /**
@@ -91,7 +92,7 @@ object RRunner extends CondaRunner with Logging {
     @volatile var sparkRBackendSecret: String = null
     val initialized = new Semaphore(0)
     val sparkRBackendThread = new Thread("SparkR backend") {
-      override def run() {
+      override def run(): Unit = {
         val (port, authHelper) = sparkRBackend.init()
         sparkRBackendPort = port
         sparkRBackendSecret = authHelper.secret

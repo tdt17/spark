@@ -20,7 +20,6 @@ library(SparkR)
 
 # SPARK-25572
 if (identical(Sys.getenv("NOT_CRAN"), "true")) {
-
   # Turn all warnings into errors
   options("warn" = 2)
 

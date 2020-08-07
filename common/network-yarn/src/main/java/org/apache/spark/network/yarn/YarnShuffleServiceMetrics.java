@@ -26,7 +26,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 
 /**
- * Forward {@link org.apache.spark.network.shuffle.ExternalShuffleBlockHandler.ShuffleMetrics}
+ * Forward {@link org.apache.spark.network.shuffle.ExternalBlockHandler.ShuffleMetrics}
  * to hadoop metrics system.
  * NodeManager by default exposes JMX endpoint where can be collected.
  */
@@ -55,7 +55,7 @@ class YarnShuffleServiceMetrics implements MetricsSource {
 
   /**
    * The metric types used in
-   * {@link org.apache.spark.network.shuffle.ExternalShuffleBlockHandler.ShuffleMetrics}.
+   * {@link org.apache.spark.network.shuffle.ExternalBlockHandler.ShuffleMetrics}.
    * Visible for testing.
    */
   public static void collectMetric(
@@ -106,17 +106,17 @@ class YarnShuffleServiceMetrics implements MetricsSource {
     } else if (metric instanceof Gauge) {
       final Object gaugeValue = ((Gauge) metric).getValue();
       if (gaugeValue instanceof Integer) {
-        metricsRecordBuilder.addGauge(getShuffleServiceMetricsInfoForGauge(name),
-                (Integer) gaugeValue);
+        metricsRecordBuilder.addGauge(
+          getShuffleServiceMetricsInfoForGauge(name), (Integer) gaugeValue);
       } else if (gaugeValue instanceof Long) {
-        metricsRecordBuilder.addGauge(getShuffleServiceMetricsInfoForGauge(name),
-                (Long) gaugeValue);
+        metricsRecordBuilder.addGauge(
+          getShuffleServiceMetricsInfoForGauge(name), (Long) gaugeValue);
       } else if (gaugeValue instanceof Float) {
-        metricsRecordBuilder.addGauge(getShuffleServiceMetricsInfoForGauge(name),
-                (Float) gaugeValue);
+        metricsRecordBuilder.addGauge(
+          getShuffleServiceMetricsInfoForGauge(name), (Float) gaugeValue);
       } else if (gaugeValue instanceof Double) {
-        metricsRecordBuilder.addGauge(getShuffleServiceMetricsInfoForGauge(name),
-                (Double) gaugeValue);
+        metricsRecordBuilder.addGauge(
+          getShuffleServiceMetricsInfoForGauge(name), (Double) gaugeValue);
       } else {
         throw new IllegalStateException(
                 "Not supported class type of metric[" + name + "] for value " + gaugeValue);

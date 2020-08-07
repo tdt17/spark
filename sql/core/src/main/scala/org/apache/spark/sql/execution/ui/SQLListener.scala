@@ -35,6 +35,12 @@ case class SparkListenerSQLAdaptiveExecutionUpdate(
   extends SparkListenerEvent
 
 @DeveloperApi
+case class SparkListenerSQLAdaptiveSQLMetricUpdates(
+    executionId: Long,
+    sqlPlanMetrics: Seq[SQLPlanMetric])
+  extends SparkListenerEvent
+
+@DeveloperApi
 case class SparkListenerSQLExecutionStart(
     executionId: Long,
     description: String,
@@ -60,7 +66,7 @@ case class SparkListenerSQLExecutionEnd(executionId: Long, time: Long)
   @JsonIgnore private[sql] var qe: QueryExecution = null
 
   // The exception object that caused this execution to fail. None if the execution doesn't fail.
-  @JsonIgnore private[sql] var executionFailure: Option[Exception] = None
+  @JsonIgnore private[sql] var executionFailure: Option[Throwable] = None
 }
 
 /**

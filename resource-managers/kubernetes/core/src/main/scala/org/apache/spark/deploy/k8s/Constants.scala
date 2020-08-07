@@ -73,7 +73,6 @@ private[spark] object Constants {
   val MOUNTED_FILES_SECRET_DIR = "/var/data/spark-submitted-files"
 
   // BINDINGS
-  val ENV_PYSPARK_FILES = "PYSPARK_FILES"
   val ENV_PYSPARK_MAJOR_PYTHON_VERSION = "PYSPARK_MAJOR_PYTHON_VERSION"
 
   // Pod spec templates

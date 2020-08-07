@@ -30,23 +30,25 @@ rdd <- parallelize(sc, nums, 2L)
 
 test_that("include inside function", {
   # Only run the test if plyr is installed.
+  if ("plyr" %in% rownames(installed.packages()) &&
+      suppressPackageStartupMessages(suppressWarnings(library(plyr, logical.return = TRUE)))) {
+    generateData <- function(x) {
+      suppressPackageStartupMessages(library(plyr))
+      attach(airquality)
+      result <- transform(Ozone, logOzone = log(Ozone))
+      result
+    }
 
-  suppressPackageStartupMessages(library(plyr))
-  generateData <- function(x) {
-    suppressPackageStartupMessages(library(plyr))
-    attach(airquality)
-    result <- transform(Ozone, logOzone = log(Ozone))
-    result
+    data <- lapplyPartition(rdd, generateData)
+    actual <- collectRDD(data)
   }
-
-  data <- lapplyPartition(rdd, generateData)
-  actual <- collectRDD(data)
+  expect_true(TRUE)
 })
 
 test_that("use include package", {
   # Only run the test if plyr is installed.
-  if ("plyr" %in% rownames(installed.packages())) {
-    suppressPackageStartupMessages(library(plyr))
+  if ("plyr" %in% rownames(installed.packages()) &&
+      suppressPackageStartupMessages(suppressWarnings(library(plyr, logical.return = TRUE)))) {
     generateData <- function(x) {
       attach(airquality)
       result <- transform(Ozone, logOzone = log(Ozone))
@@ -57,6 +59,7 @@ test_that("use include package", {
     data <- lapplyPartition(rdd, generateData)
     actual <- collectRDD(data)
   }
+  expect_true(TRUE)
 })
 
 sparkR.session.stop()

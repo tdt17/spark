@@ -58,11 +58,19 @@ class ClasspathDependenciesSuite extends SparkFunSuite {
   }
 
   test("shaded Protobuf") {
-    assertLoads("org.apache.hive.com.google.protobuf.ServiceException")
+    if (HiveUtils.isHive23) {
+      assertLoads("com.google.protobuf.ServiceException")
+    } else {
+      assertLoads("org.apache.hive.com.google.protobuf.ServiceException")
+    }
   }
 
   test("shaded Kryo") {
-    assertLoads("org.apache.hive.com.esotericsoftware.kryo.Kryo")
+    if (HiveUtils.isHive23) {
+      assertLoads("com.esotericsoftware.kryo.Kryo")
+    } else {
+      assertLoads("org.apache.hive.com.esotericsoftware.kryo.Kryo")
+    }
   }
 
   test("hive-common") {
@@ -80,4 +88,13 @@ class ClasspathDependenciesSuite extends SparkFunSuite {
     assertClassNotFound("org.apache.hive.com.esotericsoftware.shaded." + STD_INSTANTIATOR)
   }
 
+  test("parquet-hadoop-bundle") {
+    if (HiveUtils.isHive23) {
+      assertLoads("org.apache.parquet.hadoop.ParquetOutputFormat")
+      assertLoads("org.apache.parquet.hadoop.ParquetInputFormat")
+    } else {
+      assertLoads("parquet.hadoop.ParquetOutputFormat")
+      assertLoads("parquet.hadoop.ParquetInputFormat")
+    }
+  }
 }

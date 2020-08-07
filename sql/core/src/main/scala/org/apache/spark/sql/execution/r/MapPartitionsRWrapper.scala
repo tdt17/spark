@@ -60,7 +60,7 @@ case class MapPartitionsRWrapper(
       SerializationFormats.BYTE
     }
 
-    val runner = new RRunner[Array[Byte]](
+    val runner = new RRunner[Any, Array[Byte]](
       func, deserializer, serializer, packageNames, broadcastVars,
       isDataFrame = true, colNames = colNames, mode = RRunnerModes.DATAFRAME_DAPPLY,
       condaSetupInstructions = condaInstructions)

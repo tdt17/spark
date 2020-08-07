@@ -22,10 +22,8 @@ import java.io.File
 import scala.util.Random
 
 import org.apache.spark.SparkConf
-import org.apache.spark.benchmark.{Benchmark, BenchmarkBase}
-import org.apache.spark.internal.config.UI._
+import org.apache.spark.benchmark.Benchmark
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.catalyst.plans.SQLHelper
 import org.apache.spark.sql.functions.monotonically_increasing_id
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.internal.SQLConf.ParquetOutputTimestampType
@@ -41,17 +39,20 @@ import org.apache.spark.sql.types.{ByteType, Decimal, DecimalType, TimestampType
  *      Results will be written to "benchmarks/FilterPushdownBenchmark-results.txt".
  * }}}
  */
-object FilterPushdownBenchmark extends BenchmarkBase with SQLHelper {
+object FilterPushdownBenchmark extends SqlBasedBenchmark {
 
-  private val conf = new SparkConf()
-    .setAppName(this.getClass.getSimpleName)
-    // Since `spark.master` always exists, overrides this value
-    .set("spark.master", "local[1]")
-    .setIfMissing("spark.driver.memory", "3g")
-    .setIfMissing("spark.executor.memory", "3g")
-    .setIfMissing(UI_ENABLED, false)
-    .setIfMissing("orc.compression", "snappy")
-    .setIfMissing("spark.sql.parquet.compression.codec", "snappy")
+  override def getSparkSession: SparkSession = {
+    val conf = new SparkConf()
+      .setAppName(this.getClass.getSimpleName)
+      // Since `spark.master` always exists, overrides this value
+      .set("spark.master", "local[1]")
+      .setIfMissing("spark.driver.memory", "3g")
+      .setIfMissing("spark.executor.memory", "3g")
+      .setIfMissing("orc.compression", "snappy")
+      .setIfMissing("spark.sql.parquet.compression.codec", "snappy")
+
+    SparkSession.builder().config(conf).getOrCreate()
+  }
 
   private val numRows = 1024 * 1024 * 15
   private val width = 5
@@ -118,7 +119,7 @@ object FilterPushdownBenchmark extends BenchmarkBase with SQLHelper {
       val name = s"Parquet Vectorized ${if (pushDownEnabled) s"(Pushdown)" else ""}"
       benchmark.addCase(name) { _ =>
         withSQLConf(SQLConf.PARQUET_FILTER_PUSHDOWN_ENABLED.key -> s"$pushDownEnabled") {
-          spark.sql(s"SELECT $selectExpr FROM parquetTable WHERE $whereExpr").collect()
+          spark.sql(s"SELECT $selectExpr FROM parquetTable WHERE $whereExpr").noop()
         }
       }
     }
@@ -127,7 +128,7 @@ object FilterPushdownBenchmark extends BenchmarkBase with SQLHelper {
       val name = s"Native ORC Vectorized ${if (pushDownEnabled) s"(Pushdown)" else ""}"
       benchmark.addCase(name) { _ =>
         withSQLConf(SQLConf.ORC_FILTER_PUSHDOWN_ENABLED.key -> s"$pushDownEnabled") {
-          spark.sql(s"SELECT $selectExpr FROM orcTable WHERE $whereExpr").collect()
+          spark.sql(s"SELECT $selectExpr FROM orcTable WHERE $whereExpr").noop()
         }
       }
     }

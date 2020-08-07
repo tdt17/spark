@@ -15,14 +15,12 @@
 # limitations under the License.
 #
 
-from __future__ import print_function
 import os
 import shutil
 import subprocess
 import sys
 
 subprocess_check_output = subprocess.check_output
-subprocess_check_call = subprocess.check_call
 
 
 def exit_from_command_with_retcode(cmd, retcode):
@@ -55,9 +53,9 @@ def run_cmd(cmd, return_output=False, env=None):
         cmd = cmd.split()
     try:
         if return_output:
-            return subprocess_check_output(cmd, env=env)
+            return subprocess_check_output(cmd, env=env).decode('utf-8')
         else:
-            return subprocess_check_call(cmd, env=env)
+            return subprocess.run(cmd, env=env, universal_newlines=True, check=True)
     except subprocess.CalledProcessError as e:
         exit_from_command_with_retcode(e.cmd, e.returncode)
 

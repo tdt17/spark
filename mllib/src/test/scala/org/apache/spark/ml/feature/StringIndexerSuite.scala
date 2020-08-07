@@ -62,6 +62,23 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
     }
   }
 
+  test("StringIndexer.transformSchema)") {
+    val idxToStr = new StringIndexer().setInputCol("input").setOutputCol("output")
+    val inSchema = StructType(Seq(StructField("input", StringType)))
+    val outSchema = idxToStr.transformSchema(inSchema)
+    assert(outSchema("output").dataType === DoubleType)
+  }
+
+  test("StringIndexer.transformSchema multi col") {
+    val idxToStr = new StringIndexer().setInputCols(Array("input", "input2")).
+      setOutputCols(Array("output", "output2"))
+    val inSchema = StructType(Seq(StructField("input", StringType),
+      StructField("input2", StringType)))
+    val outSchema = idxToStr.transformSchema(inSchema)
+    assert(outSchema("output").dataType === DoubleType)
+    assert(outSchema("output2").dataType === DoubleType)
+  }
+
   test("StringIndexerUnseen") {
     val data = Seq((0, "a"), (1, "b"), (4, "b"))
     val data2 = Seq((0, "a"), (1, "b"), (2, "c"), (3, "d"))
@@ -212,7 +229,7 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
       .setOutputCol("myOutputCol")
       .setHandleInvalid("skip")
     val newInstance = testDefaultReadWrite(instance)
-    assert(newInstance.labels === instance.labels)
+    assert(newInstance.labelsArray(0) === instance.labelsArray(0))
   }
 
   test("IndexToString params") {
@@ -258,7 +275,7 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
     val idx2str = new IndexToString()
       .setInputCol("labelIndex")
       .setOutputCol("sameLabel")
-      .setLabels(indexer.labels)
+      .setLabels(indexer.labelsArray(0))
 
     testTransformer[(Int, String, Double)](transformed, idx2str, "sameLabel", "label") {
       case Row(sameLabel, label) =>
@@ -342,5 +359,75 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
       "CITYIndexed") { rows =>
       assert(rows.toList.count(_.getDouble(0) == 1.0) === 1)
     }
+  }
+
+  test("StringIndexer multiple input columns") {
+    val data = Seq(
+      Row("a", 0.0, "e", 1.0),
+      Row("b", 2.0, "f", 0.0),
+      Row("c", 1.0, "e", 1.0),
+      Row("a", 0.0, "f", 0.0),
+      Row("a", 0.0, "f", 0.0),
+      Row("c", 1.0, "f", 0.0))
+
+    val schema = StructType(Array(
+      StructField("label1", StringType),
+      StructField("expected1", DoubleType),
+      StructField("label2", StringType),
+      StructField("expected2", DoubleType)))
+
+    val df = spark.createDataFrame(sc.parallelize(data), schema)
+
+    val indexer = new StringIndexer()
+      .setInputCols(Array("label1", "label2"))
+      .setOutputCols(Array("labelIndex1", "labelIndex2"))
+    val indexerModel = indexer.fit(df)
+
+    MLTestingUtils.checkCopyAndUids(indexer, indexerModel)
+
+    val transformed = indexerModel.transform(df)
+
+    // Checks output attribute correctness.
+    val attr1 = Attribute.fromStructField(transformed.schema("labelIndex1"))
+      .asInstanceOf[NominalAttribute]
+    assert(attr1.values.get === Array("a", "c", "b"))
+    val attr2 = Attribute.fromStructField(transformed.schema("labelIndex2"))
+      .asInstanceOf[NominalAttribute]
+    assert(attr2.values.get === Array("f", "e"))
+
+    transformed.select("labelIndex1", "expected1").rdd.map { r =>
+      (r.getDouble(0), r.getDouble(1))
+    }.collect().foreach { case (index, expected) =>
+      assert(index == expected)
+    }
+
+    transformed.select("labelIndex2", "expected2").rdd.map { r =>
+      (r.getDouble(0), r.getDouble(1))
+    }.collect().foreach { case (index, expected) =>
+      assert(index == expected)
+    }
+  }
+
+  test("Correctly skipping NULL and NaN values") {
+    val df = Seq(("a", Double.NaN), (null, 1.0), ("b", 2.0), (null, 3.0)).toDF("str", "double")
+
+    val indexer = new StringIndexer()
+      .setInputCols(Array("str", "double"))
+      .setOutputCols(Array("strIndex", "doubleIndex"))
+
+    val model = indexer.fit(df)
+    assert(model.labelsArray(0) === Array("a", "b"))
+    assert(model.labelsArray(1) === Array("1.0", "2.0", "3.0"))
+  }
+
+  test("Load StringIndexderModel prior to Spark 3.0") {
+    val modelPath = testFile("ml-models/strIndexerModel-2.4.4")
+
+    val loadedModel = StringIndexerModel.load(modelPath)
+    assert(loadedModel.labelsArray === Array(Array("b", "c", "a")))
+
+    val metadata = spark.read.json(s"$modelPath/metadata")
+    val sparkVersionStr = metadata.select("sparkVersion").first().getString(0)
+    assert(sparkVersionStr == "2.4.4")
   }
 }

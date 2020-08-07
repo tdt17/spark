@@ -26,7 +26,8 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{AnalysisException, DataFrame, Row, SaveMode, SparkSession, SQLContext}
 import org.apache.spark.sql.catalyst.analysis._
-import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.catalyst.util.{DateFormatter, DateTimeUtils, TimestampFormatter}
+import org.apache.spark.sql.catalyst.util.DateTimeUtils.{getZoneId, stringToDate, stringToTimestamp}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.apache.spark.sql.sources._
@@ -174,10 +175,21 @@ private[sql] object JDBCRelation extends Logging {
     (dialect.quoteIdentifier(column.name), column.dataType)
   }
 
-  private def toInternalBoundValue(value: String, columnType: DataType): Long = columnType match {
-    case _: NumericType => value.toLong
-    case DateType => DateTimeUtils.fromJavaDate(Date.valueOf(value)).toLong
-    case TimestampType => DateTimeUtils.fromJavaTimestamp(Timestamp.valueOf(value))
+  private def toInternalBoundValue(
+      value: String,
+      columnType: DataType,
+      timeZoneId: String): Long = {
+    def parse[T](f: UTF8String => Option[T]): T = {
+      f(UTF8String.fromString(value)).getOrElse {
+        throw new IllegalArgumentException(
+          s"Cannot parse the bound value $value as ${columnType.catalogString}")
+      }
+    }
+    columnType match {
+      case _: NumericType => value.toLong
+      case DateType => parse(stringToDate(_, getZoneId(timeZoneId))).toLong
+      case TimestampType => parse(stringToTimestamp(_, getZoneId(timeZoneId)))
+    }
   }
 
   private def toBoundValueInWhereClause(
@@ -187,8 +199,13 @@ private[sql] object JDBCRelation extends Logging {
     def dateTimeToString(): String = {
       val timeZone = DateTimeUtils.getTimeZone(timeZoneId)
       val dateTimeStr = columnType match {
-        case DateType => DateTimeUtils.dateToString(value.toInt, timeZone)
-        case TimestampType => DateTimeUtils.timestampToString(value, timeZone)
+        case DateType =>
+          val dateFormatter = DateFormatter(DateTimeUtils.getZoneId(timeZoneId))
+          dateFormatter.format(value.toInt)
+        case TimestampType =>
+          val timestampFormatter = TimestampFormatter.getFractionFormatter(
+            DateTimeUtils.getZoneId(timeZoneId))
+          DateTimeUtils.timestampToString(timestampFormatter, value)
       }
       s"'$dateTimeStr'"
     }

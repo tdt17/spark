@@ -28,14 +28,16 @@ import org.json4s.jackson.JsonMethods
 import org.json4s.jackson.JsonMethods._
 
 import org.apache.spark.SparkFunSuite
-import org.apache.spark.sql.catalyst.{FunctionIdentifier, InternalRow, TableIdentifier}
+import org.apache.spark.sql.catalyst.{AliasIdentifier, FunctionIdentifier, InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.dsl.expressions.DslString
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.catalyst.plans.{LeftOuter, NaturalJoin, SQLHelper}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.plans.physical.{IdentityBroadcastMode, RoundRobinPartitioning, SinglePartition}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 
@@ -430,6 +432,30 @@ class TreeNodeSuite extends SparkFunSuite with SQLHelper {
         "product-class" -> JString(classOf[FunctionIdentifier].getName),
           "funcName" -> "function"))
 
+    // Converts AliasIdentifier to JSON
+    assertJSON(
+      AliasIdentifier("alias", Seq("ns1", "ns2")),
+      JObject(
+        "product-class" -> JString(classOf[AliasIdentifier].getName),
+          "name" -> "alias",
+          "qualifier" -> "[ns1, ns2]"))
+
+    // Converts SubqueryAlias to JSON
+    assertJSON(
+      SubqueryAlias("t1", JsonTestTreeNode("0")),
+      List(
+        JObject(
+          "class" -> classOf[SubqueryAlias].getName,
+          "num-children" -> 1,
+          "identifier" -> JObject("product-class" -> JString(classOf[AliasIdentifier].getName),
+            "name" -> "t1",
+            "qualifier" -> JArray(Nil)),
+          "child" -> 0),
+        JObject(
+          "class" -> classOf[JsonTestTreeNode].getName,
+          "num-children" -> 0,
+          "arg" -> "0")))
+
     // Converts BucketSpec to JSON
     assertJSON(
       BucketSpec(1, Seq("bucket"), Seq("sort")),
@@ -569,7 +595,8 @@ class TreeNodeSuite extends SparkFunSuite with SQLHelper {
   }
 
   test("toJSON should not throws java.lang.StackOverflowError") {
-    val udf = ScalaUDF(SelfReferenceUDF(), BooleanType, Seq("col1".attr), true :: Nil)
+    val udf = ScalaUDF(SelfReferenceUDF(), BooleanType, Seq("col1".attr),
+      Option(ExpressionEncoder[String]()) :: Nil)
     // Should not throw java.lang.StackOverflowError
     udf.toJSON
   }
@@ -599,6 +626,30 @@ class TreeNodeSuite extends SparkFunSuite with SQLHelper {
     val result = before.withNewChildren(Stream(Literal(1), Literal(3)))
     val expected = Coalesce(Stream(Literal(1), Literal(3)))
     assert(result === expected)
+  }
+
+  test("treeString limits plan length") {
+    withSQLConf(SQLConf.MAX_PLAN_STRING_LENGTH.key -> "200") {
+      val ds = (1 until 20).foldLeft(Literal("TestLiteral"): Expression) { case (treeNode, x) =>
+        Add(Literal(x), treeNode)
+      }
+
+      val planString = ds.treeString
+      logWarning("Plan string: " + planString)
+      assert(planString.endsWith(" more characters"))
+      assert(planString.length <= SQLConf.get.maxPlanStringLength)
+    }
+  }
+
+  test("treeString limit at zero") {
+    withSQLConf(SQLConf.MAX_PLAN_STRING_LENGTH.key -> "0") {
+      val ds = (1 until 2).foldLeft(Literal("TestLiteral"): Expression) { case (treeNode, x) =>
+        Add(Literal(x), treeNode)
+      }
+
+      val planString = ds.treeString
+      assert(planString.startsWith("Truncated plan of"))
+    }
   }
 
   test("tags will be carried over after copy & transform") {
@@ -655,12 +706,12 @@ class TreeNodeSuite extends SparkFunSuite with SQLHelper {
   }
 
   test("clone") {
-    def assertDifferentInstance(before: AnyRef, after: AnyRef): Unit = {
+    def assertDifferentInstance[T <: TreeNode[T]](before: TreeNode[T], after: TreeNode[T]): Unit = {
       assert(before.ne(after) && before == after)
-      before.asInstanceOf[TreeNode[_]].children.zip(
-          after.asInstanceOf[TreeNode[_]].children).foreach {
-        case (beforeChild: AnyRef, afterChild: AnyRef) =>
-          assertDifferentInstance(beforeChild, afterChild)
+      before.children.zip(after.children).foreach { case (beforeChild, afterChild) =>
+        assertDifferentInstance(
+          beforeChild.asInstanceOf[TreeNode[T]],
+          afterChild.asInstanceOf[TreeNode[T]])
       }
     }
 

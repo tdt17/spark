@@ -73,11 +73,17 @@ private[spark] class ExecutorPodsLifecycleManager(
               SafeArg.of("podName", state.pod.getMetadata.getName))
             onFinalNonDeletedState(failed, execId, schedulerBackend, execIdsRemovedInThisRound)
           case succeeded@PodSucceeded(_) =>
-            safeLogDebug(
-              "Snapshot reported succeeded executor." +
-              " Note that unusual unless Spark specifically informed the executor to exit.",
-              SafeArg.of("executorId", execId),
-              SafeArg.of("podName", state.pod.getMetadata.getName))
+            if (schedulerBackend.isExecutorActive(execId.toString)) {
+              safeLogDebug(
+                "Snapshot reported succeeded executor." +
+                  " Note that unusual unless Spark specifically informed the executor to exit.",
+                SafeArg.of("executorId", execId),
+                SafeArg.of("podName", state.pod.getMetadata.getName))
+            } else {
+              safeLogDebug("Snapshot reported succeeded executor.",
+                SafeArg.of("execId", execId),
+                UnsafeArg.of("podName", state.pod.getMetadata.getName))
+            }
             onFinalNonDeletedState(succeeded, execId, schedulerBackend, execIdsRemovedInThisRound)
           case _ =>
         }

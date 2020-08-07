@@ -22,13 +22,13 @@ import java.util.concurrent.TimeUnit
 
 import scala.collection.mutable
 
-import com.codahale.metrics._
+import com.codahale.metrics.{Metric, MetricRegistry}
 import org.eclipse.jetty.servlet.ServletContextHandler
 
 import org.apache.spark.{SecurityManager, SparkConf}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
-import org.apache.spark.metrics.sink.{MetricsServlet, Sink}
+import org.apache.spark.metrics.sink.{MetricsServlet, PrometheusServlet, Sink}
 import org.apache.spark.metrics.source.{Source, StaticSources}
 import org.apache.spark.util.Utils
 
@@ -84,18 +84,20 @@ private[spark] class MetricsSystem private (
 
   // Treat MetricsServlet as a special sink as it should be exposed to add handlers to web ui
   private var metricsServlet: Option[MetricsServlet] = None
+  private var prometheusServlet: Option[PrometheusServlet] = None
 
   /**
    * Get any UI handlers used by this metrics system; can only be called after start().
    */
   def getServletHandlers: Array[ServletContextHandler] = {
     require(running, "Can only call getServletHandlers on a running MetricsSystem")
-    metricsServlet.map(_.getHandlers(conf)).getOrElse(Array())
+    metricsServlet.map(_.getHandlers(conf)).getOrElse(Array()) ++
+      prometheusServlet.map(_.getHandlers(conf)).getOrElse(Array())
   }
 
   metricsConfig.initialize()
 
-  def start(registerStaticSources: Boolean = true) {
+  def start(registerStaticSources: Boolean = true): Unit = {
     require(!running, "Attempting to start a MetricsSystem that is already running")
     running = true
     if (registerStaticSources) {
@@ -107,19 +109,21 @@ private[spark] class MetricsSystem private (
     sinks.foreach(_.start())
   }
 
-  def stop() {
+  def stop(): Unit = {
     if (running) {
       sinks.foreach(_.stop())
       sourceToListeners.keySet.foreach(deregisterSource)
       sourceToListeners.clear()
       SharedMetricRegistries.getDefault.removeListener(defaultListener)
+      // TODO(@jcasale): untangle https://github.com/palantir/spark/pull/214 with upstream
+      registry.removeMatching((_: String, _: Metric) => true)
     } else {
       logWarning("Stopping a MetricsSystem that is not running")
     }
     running = false
   }
 
-  def report() {
+  def report(): Unit = {
     sinks.foreach(_.report())
   }
 
@@ -129,7 +133,7 @@ private[spark] class MetricsSystem private (
    * If either ID is not available, this defaults to just using <source name>.
    *
    * @param source Metric source to be named by this method.
-   * @return An unique metric name for each combination of
+   * @return A unique metric name for each combination of
    *         application, executor/driver and metric source.
    */
   private[spark] def buildRegistryName(source: Source): String = {
@@ -160,7 +164,8 @@ private[spark] class MetricsSystem private (
   def getSourcesByName(sourceName: String): Seq[Source] =
     sourceToListeners.keySet.filter(_.sourceName == sourceName).toSeq
 
-  def registerSource(source: Source) {
+  def registerSource(source: Source): Unit = {
+    sources += source
     try {
       val listener = new MetricsSystemListener(buildRegistryName(source))
       source.metricRegistry.addListener(listener)
@@ -172,9 +177,7 @@ private[spark] class MetricsSystem private (
 
   def deregisterSource(source: Source) {
     val regName = buildRegistryName(source)
-    registry.removeMatching(new MetricFilter {
-      def matches(name: String, metric: Metric): Boolean = name.startsWith(regName)
-    })
+    registry.removeMatching((name: String, _: Metric) => name.startsWith(regName))
     sourceToListeners.get(source).foreach(source.metricRegistry.removeListener)
   }
 
@@ -188,7 +191,7 @@ private[spark] class MetricsSystem private (
 
   def getSinks: Seq[Sink] = sinks.to[collection.immutable.Seq]
 
-  private def registerSources() {
+  private def registerSources(): Unit = {
     val instConfig = metricsConfig.getInstance(instance)
     val sourceConfigs = metricsConfig.subProperties(instConfig, MetricsSystem.SOURCE_REGEX)
 
@@ -196,15 +199,15 @@ private[spark] class MetricsSystem private (
     sourceConfigs.foreach { kv =>
       val classPath = kv._2.getProperty("class")
       try {
-        val source = Utils.classForName(classPath).getConstructor().newInstance()
-        registerSource(source.asInstanceOf[Source])
+        val source = Utils.classForName[Source](classPath).getConstructor().newInstance()
+        registerSource(source)
       } catch {
         case e: Exception => logError("Source class " + classPath + " cannot be instantiated", e)
       }
     }
   }
 
-  private def registerSinks() {
+  private def registerSinks(): Unit = {
     val instConfig = metricsConfig.getInstance(instance)
     val sinkConfigs = metricsConfig.subProperties(instConfig, MetricsSystem.SINK_REGEX)
 
@@ -212,13 +215,24 @@ private[spark] class MetricsSystem private (
       val classPath = kv._2.getProperty("class")
       if (null != classPath) {
         try {
-          val sink = Utils.classForName(classPath)
-            .getConstructor(classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
-            .newInstance(kv._2, registry, securityMgr)
           if (kv._1 == "servlet") {
-            metricsServlet = Some(sink.asInstanceOf[MetricsServlet])
+            val servlet = Utils.classForName[MetricsServlet](classPath)
+              .getConstructor(
+                classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
+              .newInstance(kv._2, registry, securityMgr)
+            metricsServlet = Some(servlet)
+          } else if (kv._1 == "prometheusServlet") {
+            val servlet = Utils.classForName[PrometheusServlet](classPath)
+              .getConstructor(
+                classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
+              .newInstance(kv._2, registry, securityMgr)
+            prometheusServlet = Some(servlet)
           } else {
-            sinks += sink.asInstanceOf[Sink]
+            val sink = Utils.classForName[Sink](classPath)
+              .getConstructor(
+                classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
+              .newInstance(kv._2, registry, securityMgr)
+            sinks += sink
           }
         } catch {
           case e: Exception =>
@@ -276,7 +290,7 @@ private[spark] object MetricsSystem {
     SharedMetricRegistries.setDefault("spark", new MetricRegistry())
   }
 
-  def checkMinimalPollingPeriod(pollUnit: TimeUnit, pollPeriod: Int) {
+  def checkMinimalPollingPeriod(pollUnit: TimeUnit, pollPeriod: Int): Unit = {
     val period = MINIMAL_POLL_UNIT.convert(pollPeriod, pollUnit)
     if (period < MINIMAL_POLL_PERIOD) {
       throw new IllegalArgumentException("Polling period " + pollPeriod + " " + pollUnit +
@@ -296,4 +310,30 @@ private[spark] object MetricsSystem {
      registry: MetricRegistry): MetricsSystem = {
     new MetricsSystem(instance, conf, securityMgr, registry)
   }
+}
+
+private[spark] object MetricsSystemInstances {
+  // The Spark standalone master process
+  val MASTER = "master"
+
+  // A component within the master which reports on various applications
+  val APPLICATIONS = "applications"
+
+  // A Spark standalone worker process
+  val WORKER = "worker"
+
+  // A Spark executor
+  val EXECUTOR = "executor"
+
+  // The Spark driver process (the process in which your SparkContext is created)
+  val DRIVER = "driver"
+
+  // The Spark shuffle service
+  val SHUFFLE_SERVICE = "shuffleService"
+
+  // The Spark ApplicationMaster when running on YARN
+  val APPLICATION_MASTER = "applicationMaster"
+
+  // The Spark cluster scheduler when running on Mesos
+  val MESOS_CLUSTER = "mesos_cluster"
 }

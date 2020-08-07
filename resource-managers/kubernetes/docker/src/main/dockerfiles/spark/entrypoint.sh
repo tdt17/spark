@@ -44,10 +44,6 @@ if [ -n "$SPARK_EXTRA_CLASSPATH" ]; then
   SPARK_CLASSPATH="$SPARK_CLASSPATH:$SPARK_EXTRA_CLASSPATH"
 fi
 
-if [ -n "$PYSPARK_FILES" ]; then
-    PYTHONPATH="$PYTHONPATH:$PYSPARK_FILES"
-fi
-
 if [ "$PYSPARK_MAJOR_PYTHON_VERSION" == "2" ]; then
     pyv="$(python -V 2>&1)"
     export PYTHON_VERSION="${pyv:7}"
@@ -60,6 +56,12 @@ elif [ "$PYSPARK_MAJOR_PYTHON_VERSION" == "3" ]; then
     export PYSPARK_DRIVER_PYTHON="python3"
 fi
 
+# If HADOOP_HOME is set and SPARK_DIST_CLASSPATH is not set, set it here so Hadoop jars are available to the executor.
+# It does not set SPARK_DIST_CLASSPATH if already set, to avoid overriding customizations of this value from elsewhere e.g. Docker/K8s.
+if [ -n "${HADOOP_HOME}"  ] && [ -z "${SPARK_DIST_CLASSPATH}"  ]; then
+  export SPARK_DIST_CLASSPATH="$($HADOOP_HOME/bin/hadoop classpath)"
+fi
+
 if ! [ -z ${HADOOP_CONF_DIR+x} ]; then
   SPARK_CLASSPATH="$HADOOP_CONF_DIR:$SPARK_CLASSPATH";
 fi
@@ -68,6 +70,7 @@ if [ -n "$SPARK_MOUNTED_FILES_FROM_SECRET_DIR" ]; then
   cp -R "$SPARK_MOUNTED_FILES_FROM_SECRET_DIR/." .
 fi
 
+case "$1" in
 case "$1" in
   driver)
     shift 1
@@ -85,7 +88,7 @@ case "$1" in
       "${SPARK_EXECUTOR_JAVA_OPTS[@]}"
       -Xms$SPARK_EXECUTOR_MEMORY
       -Xmx$SPARK_EXECUTOR_MEMORY
-      -cp "$SPARK_CLASSPATH"
+      -cp "$SPARK_CLASSPATH:$SPARK_DIST_CLASSPATH"
       org.apache.spark.executor.CoarseGrainedExecutorBackend
       --driver-url $SPARK_DRIVER_URL
       --executor-id $SPARK_EXECUTOR_ID

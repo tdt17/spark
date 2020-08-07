@@ -23,25 +23,24 @@ import java.net.URI
 import scala.util.control.NonFatal
 
 import org.apache.avro.Schema
-import org.apache.avro.file.DataFileConstants._
 import org.apache.avro.file.DataFileReader
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
-import org.apache.avro.mapred.{AvroOutputFormat, FsInput}
-import org.apache.avro.mapreduce.AvroJob
+import org.apache.avro.mapred.FsInput
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce.Job
 
-import org.apache.spark.{SparkException, TaskContext}
+import org.apache.spark.TaskContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.execution.datasources.{FileFormat, OutputWriterFactory, PartitionedFile}
+import org.apache.spark.sql.execution.datasources.{DataSourceUtils, FileFormat, OutputWriterFactory, PartitionedFile}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.sources.{DataSourceRegister, Filter}
 import org.apache.spark.sql.types._
-import org.apache.spark.util.{SerializableConfiguration, Utils}
+import org.apache.spark.util.SerializableConfiguration
 
-private[avro] class AvroFileFormat extends FileFormat
+private[sql] class AvroFileFormat extends FileFormat
   with DataSourceRegister with Logging with Serializable {
 
   override def equals(other: Any): Boolean = other match {
@@ -56,6 +55,7 @@ private[avro] class AvroFileFormat extends FileFormat
       spark: SparkSession,
       options: Map[String, String],
       files: Seq[FileStatus]): Option[StructType] = {
+    AvroUtils.inferSchema(spark, options, files)
     val conf = spark.sessionState.newHadoopConf()
     if (options.contains("ignoreExtension")) {
       logWarning(s"Option ${AvroOptions.ignoreExtensionKey} is deprecated. Please use the " +
@@ -140,6 +140,7 @@ private[avro] class AvroFileFormat extends FileFormat
       job: Job,
       options: Map[String, String],
       dataSchema: StructType): OutputWriterFactory = {
+    AvroUtils.prepareWrite(spark.sessionState.conf, job, options, dataSchema)
     val parsedOptions = new AvroOptions(options, spark.sessionState.newHadoopConf())
     val outputAvroSchema: Schema = parsedOptions.schema
       .map(new Schema.Parser().parse)
@@ -216,8 +217,12 @@ private[avro] class AvroFileFormat extends FileFormat
         reader.sync(file.start)
         val stop = file.start + file.length
 
-        val deserializer =
-          new AvroDeserializer(userProvidedSchema.getOrElse(reader.getSchema), requiredSchema)
+        val datetimeRebaseMode = DataSourceUtils.datetimeRebaseMode(
+          reader.asInstanceOf[DataFileReader[_]].getMetaString,
+          SQLConf.get.getConf(SQLConf.LEGACY_AVRO_REBASE_MODE_IN_READ))
+
+        val deserializer = new AvroDeserializer(
+          userProvidedSchema.getOrElse(reader.getSchema), requiredSchema, datetimeRebaseMode)
 
         new Iterator[InternalRow] {
           private[this] var completed = false
@@ -249,22 +254,7 @@ private[avro] class AvroFileFormat extends FileFormat
     }
   }
 
-  override def supportDataType(dataType: DataType): Boolean = dataType match {
-    case _: AtomicType => true
-
-    case st: StructType => st.forall { f => supportDataType(f.dataType) }
-
-    case ArrayType(elementType, _) => supportDataType(elementType)
-
-    case MapType(keyType, valueType, _) =>
-      supportDataType(keyType) && supportDataType(valueType)
-
-    case udt: UserDefinedType[_] => supportDataType(udt.sqlType)
-
-    case _: NullType => true
-
-    case _ => false
-  }
+  override def supportDataType(dataType: DataType): Boolean = AvroUtils.supportsDataType(dataType)
 }
 
 private[avro] object AvroFileFormat {

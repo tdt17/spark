@@ -83,12 +83,17 @@ private[spark] class BasicExecutorFeatureStep(
     // name as the hostname.  This preserves uniqueness since the end of name contains
     // executorId
     val hostname = name.substring(Math.max(0, name.length - 63))
-    val executorMemoryQuantity = new QuantityBuilder(false)
-      .withAmount(s"${executorMemoryTotal}Mi")
-      .build()
-    val executorCpuQuantity = new QuantityBuilder(false)
-      .withAmount(executorCoresRequest)
-      .build()
+      // Remove non-word characters from the start of the hostname
+      .replaceAll("^[^\\w]+", "")
+      // Replace dangerous characters in the remaining string with a safe alternative.
+      .replaceAll("[^\\w-]+", "_")
+
+    val executorMemoryQuantity = new Quantity(s"${executorMemoryTotal}Mi")
+    val executorCpuQuantity = new Quantity(executorCoresRequest)
+
+    val executorResourceQuantities =
+      KubernetesUtils.buildResourcesQuantities(SPARK_EXECUTOR_PREFIX,
+        kubernetesConf.sparkConf)
 
     val executorEnv: Seq[EnvVar] = {
         (Seq(
@@ -163,19 +168,18 @@ private[spark] class BasicExecutorFeatureStep(
         .addToRequests("memory", executorMemoryQuantity)
         .addToLimits("memory", executorMemoryQuantity)
         .addToRequests("cpu", executorCpuQuantity)
+        .addToLimits(executorResourceQuantities.asJava)
         .endResources()
-        .addNewEnv()
-          .withName(ENV_SPARK_USER)
-          .withValue(Utils.getCurrentUserName())
-          .endEnv()
+      .addNewEnv()
+        .withName(ENV_SPARK_USER)
+        .withValue(Utils.getCurrentUserName())
+        .endEnv()
       .addAllToEnv(executorEnv.asJava)
       .withPorts(requiredPorts.asJava)
       .addToArgs("executor")
       .build()
     val containerWithLimitCores = executorLimitCores.map { limitCores =>
-      val executorCpuLimitQuantity = new QuantityBuilder(false)
-        .withAmount(limitCores)
-        .build()
+      val executorCpuLimitQuantity = new Quantity(limitCores)
       new ContainerBuilder(executorContainer)
         .editResources()
           .addToLimits("cpu", executorCpuLimitQuantity)
@@ -205,6 +209,9 @@ private[spark] class BasicExecutorFeatureStep(
         .addToImagePullSecrets(kubernetesConf.imagePullSecrets: _*)
         .endSpec()
       .build()
+
+    kubernetesConf.get(KUBERNETES_EXECUTOR_SCHEDULER_NAME)
+      .foreach(executorPod.getSpec.setSchedulerName)
 
     SparkPod(executorPod, containerWithLimitCores)
   }

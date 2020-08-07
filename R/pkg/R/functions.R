@@ -77,7 +77,13 @@ NULL
 #'          days to be added to or subtracted from \code{y}. For class \code{character}, it is
 #'          \itemize{
 #'          \item \code{date_format}: date format specification.
-#'          \item \code{from_utc_timestamp}, \code{to_utc_timestamp}: time zone to use.
+#'          \item \code{from_utc_timestamp}, \code{to_utc_timestamp}: A string detailing
+#'            the time zone ID that the input should be adjusted to. It should be in the format
+#'            of either region-based zone IDs or zone offsets. Region IDs must have the form
+#'            'area/city', such as 'America/Los_Angeles'. Zone offsets must be in the format
+#'            (+|-)HH:mm', for example '-08:00' or '+01:00'. Also 'UTC' and 'Z' are supported
+#'            as aliases of '+00:00'. Other short names are not recommended to use
+#'            because they can be ambiguous.
 #'          \item \code{next_day}: day of the week string.
 #'          }
 #' @param ... additional argument(s).
@@ -136,6 +142,14 @@ NULL
 #'           format to. See 'Details'.
 #'      }
 #' @param y Column to compute on.
+#' @param pos In \itemize{
+#'                \item \code{locate}: a start position of search.
+#'                \item \code{overlay}: a start postiton for replacement.
+#'                }
+#' @param len In \itemize{
+#'               \item \code{lpad} the maximum length of each output result.
+#'               \item \code{overlay} a number of bytes to replace.
+#'               }
 #' @param ... additional Columns.
 #' @name column_string_functions
 #' @rdname column_string_functions
@@ -736,6 +750,25 @@ setMethod("hash",
           })
 
 #' @details
+#' \code{xxhash64}: Calculates the hash code of given columns using the 64-bit
+#' variant of the xxHash algorithm, and returns the result as a long
+#' column.
+#'
+#' @rdname column_misc_functions
+#' @aliases xxhash64 xxhash64,Column-method
+#' @note xxhash64 since 3.0.0
+setMethod("xxhash64",
+          signature(x = "Column"),
+          function(x, ...) {
+            jcols <- lapply(list(x, ...), function(x) {
+              stopifnot(class(x) == "Column")
+              x@jc
+            })
+            jc <- callJStatic("org.apache.spark.sql.functions", "xxhash64", jcols)
+            column(jc)
+          })
+
+#' @details
 #' \code{dayofmonth}: Extracts the day of the month as an integer from a
 #' given date/timestamp/string.
 #'
@@ -860,8 +893,8 @@ setMethod("factorial",
 #'
 #' The function by default returns the first values it sees. It will return the first non-missing
 #' value it sees when na.rm is set to true. If all values are missing, then NA is returned.
-#' Note: the function is non-deterministic because its results depends on order of rows which
-#' may be non-deterministic after a shuffle.
+#' Note: the function is non-deterministic because its results depends on the order of the rows
+#' which may be non-deterministic after a shuffle.
 #'
 #' @param na.rm a logical value indicating whether NA values should be stripped
 #'        before the computation proceeds.
@@ -1005,8 +1038,8 @@ setMethod("kurtosis",
 #'
 #' The function by default returns the last values it sees. It will return the last non-missing
 #' value it sees when na.rm is set to true. If all values are missing, then NA is returned.
-#' Note: the function is non-deterministic because its results depends on order of rows which
-#' may be non-deterministic after a shuffle.
+#' Note: the function is non-deterministic because its results depends on the order of the rows
+#' which may be non-deterministic after a shuffle.
 #'
 #' @param x column to compute on.
 #' @param na.rm a logical value indicating whether NA values should be stripped
@@ -1299,6 +1332,35 @@ setMethod("negate",
             jc <- callJStatic("org.apache.spark.sql.functions", "negate", x@jc)
             column(jc)
           })
+
+#' @details
+#' \code{overlay}: Overlay the specified portion of \code{x} with \code{replace},
+#' starting from byte position \code{pos} of \code{src} and proceeding for
+#' \code{len} bytes.
+#'
+#' @param replace a Column with replacement.
+#'
+#' @rdname column_string_functions
+#' @aliases overlay overlay,Column-method,numericOrColumn-method
+#' @note overlay since 3.0.0
+setMethod("overlay",
+  signature(x = "Column", replace = "Column", pos = "numericOrColumn"),
+  function(x, replace, pos, len = -1) {
+    if (is.numeric(pos)) {
+      pos <- lit(as.integer(pos))
+    }
+
+    if (is.numeric(len)) {
+      len <- lit(as.integer(len))
+    }
+
+    jc <- callJStatic(
+      "org.apache.spark.sql.functions", "overlay",
+      x@jc, replace@jc, pos@jc, len@jc
+    )
+
+    column(jc)
+  })
 
 #' @details
 #' \code{quarter}: Extracts the quarter as an integer from a given date/timestamp/string.
@@ -1736,7 +1798,7 @@ setMethod("radians",
 #' @details
 #' \code{to_date}: Converts the column into a DateType. You may optionally specify
 #' a format according to the rules in:
-#' \url{http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html}.
+#' \href{https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html}{Datetime Pattern}
 #' If the string cannot be parsed according to the specified format (or default),
 #' the value of the column will be null.
 #' By default, it follows casting rules to a DateType if the format is omitted
@@ -1832,7 +1894,7 @@ setMethod("to_csv", signature(x = "Column"),
 #' @details
 #' \code{to_timestamp}: Converts the column into a TimestampType. You may optionally specify
 #' a format according to the rules in:
-#' \url{http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html}.
+#' \href{https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html}{Datetime Pattern}
 #' If the string cannot be parsed according to the specified format (or default),
 #' the value of the column will be null.
 #' By default, it follows casting rules to a TimestampType if the format is omitted
@@ -2704,8 +2766,8 @@ setMethod("format_string", signature(format = "character", x = "Column"),
 #' \code{from_unixtime}: Converts the number of seconds from unix epoch (1970-01-01 00:00:00 UTC)
 #' to a string representing the timestamp of that moment in the current system time zone in the JVM
 #' in the given format.
-#' See \href{http://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html}{
-#' Customizing Formats} for available options.
+#' See \href{https://spark.apache.org/docs/latest/sql-ref-datetime-pattern.html}{
+#' Datetime Pattern} for available options.
 #'
 #' @rdname column_datetime_functions
 #'
@@ -2798,7 +2860,6 @@ setMethod("window", signature(x = "Column"),
 #'
 #' @param substr a character string to be matched.
 #' @param str a Column where matches are sought for each entry.
-#' @param pos start position of search.
 #' @rdname column_string_functions
 #' @aliases locate locate,character,Column-method
 #' @note locate since 1.5.0
@@ -2813,7 +2874,6 @@ setMethod("locate", signature(substr = "character", str = "Column"),
 #' @details
 #' \code{lpad}: Left-padded with pad to a length of len.
 #'
-#' @param len maximum length of each output result.
 #' @param pad a character string to be padded with.
 #' @rdname column_string_functions
 #' @aliases lpad lpad,Column,numeric,character-method
@@ -2828,7 +2888,7 @@ setMethod("lpad", signature(x = "Column", len = "numeric", pad = "character"),
 
 #' @details
 #' \code{rand}: Generates a random column with independent and identically distributed (i.i.d.)
-#' samples from U[0.0, 1.0].
+#' samples uniformly distributed in [0.0, 1.0).
 #' Note: the function is non-deterministic in general case.
 #'
 #' @rdname column_nonaggregate_functions
@@ -3568,6 +3628,8 @@ setMethod("element_at",
 
 #' @details
 #' \code{explode}: Creates a new row for each element in the given array or map column.
+#' Uses the default column name \code{col} for elements in the array and
+#' \code{key} and \code{value} for elements in the map unless specified otherwise.
 #'
 #' @rdname column_collection_functions
 #' @aliases explode explode,Column-method
@@ -3594,11 +3656,11 @@ setMethod("size",
 
 #' @details
 #' \code{slice}: Returns an array containing all the elements in x from the index start
-#' (or starting from the end if start is negative) with the specified length.
+#' (array indices start at 1, or from the end if start is negative) with the specified length.
 #'
 #' @rdname column_collection_functions
-#' @param start an index indicating the first element occurring in the result.
-#' @param length a number of consecutive elements chosen to the result.
+#' @param start the starting index
+#' @param length the length of the slice
 #' @aliases slice slice,Column-method
 #' @note slice since 2.4.0
 setMethod("slice",
@@ -3628,7 +3690,9 @@ setMethod("sort_array",
 
 #' @details
 #' \code{posexplode}: Creates a new row for each element with position in the given array
-#' or map column.
+#' or map column. Uses the default column name \code{pos} for position, and \code{col}
+#' for elements in the array and \code{key} and \code{value} for elements in the map
+#' unless specified otherwise.
 #'
 #' @rdname column_collection_functions
 #' @aliases posexplode posexplode,Column-method
@@ -3681,7 +3745,7 @@ setMethod("create_map",
 #' @details
 #' \code{collect_list}: Creates a list of objects with duplicates.
 #' Note: the function is non-deterministic because the order of collected results depends
-#' on order of rows which may be non-deterministic after a shuffle.
+#' on the order of the rows which may be non-deterministic after a shuffle.
 #'
 #' @rdname column_aggregate_functions
 #' @aliases collect_list collect_list,Column-method
@@ -3702,7 +3766,7 @@ setMethod("collect_list",
 #' @details
 #' \code{collect_set}: Creates a list of objects with duplicate elements eliminated.
 #' Note: the function is non-deterministic because the order of collected results depends
-#' on order of rows which may be non-deterministic after a shuffle.
+#' on the order of the rows which may be non-deterministic after a shuffle.
 #'
 #' @rdname column_aggregate_functions
 #' @aliases collect_set collect_set,Column-method
@@ -3769,7 +3833,8 @@ setMethod("repeat_string",
 #' \code{explode}: Creates a new row for each element in the given array or map column.
 #' Unlike \code{explode}, if the array/map is \code{null} or empty
 #' then \code{null} is produced.
-#'
+#' Uses the default column name \code{col} for elements in the array and
+#' \code{key} and \code{value} for elements in the map unless specified otherwise.
 #'
 #' @rdname column_collection_functions
 #' @aliases explode_outer explode_outer,Column-method
@@ -3794,6 +3859,9 @@ setMethod("explode_outer",
 #' \code{posexplode_outer}: Creates a new row for each element with position in the given
 #' array or map column. Unlike \code{posexplode}, if the array/map is \code{null} or empty
 #' then the row (\code{null}, \code{null}) is produced.
+#' Uses the default column name \code{pos} for position, and \code{col}
+#' for elements in the array and \code{key} and \code{value} for elements in the map
+#' unless specified otherwise.
 #'
 #' @rdname column_collection_functions
 #' @aliases posexplode_outer posexplode_outer,Column-method

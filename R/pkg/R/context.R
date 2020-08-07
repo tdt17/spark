@@ -29,7 +29,7 @@ getMinPartitions <- function(sc, minPartitions) {
 #'
 #' This function reads a text file from HDFS, a local file system (available on all
 #' nodes), or any Hadoop-supported file system URI, and creates an
-#' RDD of strings from it.
+#' RDD of strings from it. The text files must be encoded as UTF-8.
 #'
 #' @param sc SparkContext to use
 #' @param path Path of file to read. A vector of multiple paths is allowed.
@@ -144,13 +144,13 @@ parallelize <- function(sc, coll, numSlices = 1) {
   if ((!is.list(coll) && !is.vector(coll)) || is.data.frame(coll)) {
   # nolint end
     if (is.data.frame(coll)) {
-      message(paste("context.R: A data frame is parallelized by columns."))
+      message("context.R: A data frame is parallelized by columns.")
     } else {
       if (is.matrix(coll)) {
-        message(paste("context.R: A matrix is parallelized by elements."))
+        message("context.R: A matrix is parallelized by elements.")
       } else {
-        message(paste("context.R: parallelize() currently only supports lists and vectors.",
-                      "Calling as.list() to coerce coll into a list."))
+        message("context.R: parallelize() currently only supports lists and vectors. ",
+                "Calling as.list() to coerce coll into a list.")
       }
     }
     coll <- as.list(coll)
@@ -301,7 +301,7 @@ broadcastRDD <- function(sc, object) {
 #' Set the checkpoint directory
 #'
 #' Set the directory under which RDDs are going to be checkpointed. The
-#' directory must be a HDFS path if running on a cluster.
+#' directory must be an HDFS path if running on a cluster.
 #'
 #' @param sc Spark Context to use
 #' @param dirName Directory path
@@ -325,7 +325,8 @@ setCheckpointDirSC <- function(sc, dirName) {
 #'
 #' A directory can be given if the recursive option is set to true.
 #' Currently directories are only supported for Hadoop-supported filesystems.
-#' Refer Hadoop-supported filesystems at \url{https://wiki.apache.org/hadoop/HCFS}.
+#' Refer Hadoop-supported filesystems at
+#' \url{https://cwiki.apache.org/confluence/display/HADOOP2/HCFS}.
 #'
 #' Note: A path can be added only once. Subsequent additions of the same path are ignored.
 #'
@@ -422,7 +423,7 @@ spark.getSparkFiles <- function(fileName) {
 #' @examples
 #'\dontrun{
 #' sparkR.session()
-#' doubled <- spark.lapply(1:10, function(x){2 * x})
+#' doubled <- spark.lapply(1:10, function(x) {2 * x})
 #'}
 #' @note spark.lapply since 2.0.0
 spark.lapply <- function(list, func) {
@@ -452,7 +453,7 @@ setLogLevel <- function(level) {
 #' Set checkpoint directory
 #'
 #' Set the directory under which SparkDataFrame are going to be checkpointed. The directory must be
-#' a HDFS path if running on a cluster.
+#' an HDFS path if running on a cluster.
 #'
 #' @rdname setCheckpointDir
 #' @param directory Directory path to checkpoint to

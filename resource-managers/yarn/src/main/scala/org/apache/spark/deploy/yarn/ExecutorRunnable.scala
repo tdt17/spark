@@ -40,7 +40,8 @@ import org.apache.spark.{SecurityManager, SparkConf, SparkException}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
 import org.apache.spark.network.util.JavaUtils
-import org.apache.spark.util.{Utils, YarnContainerInfoHelper}
+import org.apache.spark.resource.ResourceProfile
+import org.apache.spark.util.Utils
 
 private[yarn] class ExecutorRunnable(
     container: Option[Container],
@@ -53,7 +54,8 @@ private[yarn] class ExecutorRunnable(
     executorCores: Int,
     appId: String,
     securityMgr: SecurityManager,
-    localResources: Map[String, LocalResource]) extends Logging {
+    localResources: Map[String, LocalResource],
+    resourceProfileId: Int) extends Logging {
 
   var rpc: YarnRPC = YarnRPC.create(conf)
   var nmClient: NMClient = _
@@ -72,11 +74,11 @@ private[yarn] class ExecutorRunnable(
 
     s"""
     |===============================================================================
-    |YARN executor launch context:
+    |Default YARN executor launch context:
     |  env:
     |${Utils.redact(sparkConf, env.toSeq).map { case (k, v) => s"    $k -> $v\n" }.mkString}
     |  command:
-    |    ${commands.mkString(" \\ \n      ")}
+    |    ${Utils.redactCommandLineArgs(sparkConf, commands).mkString(" \\ \n      ")}
     |
     |  resources:
     |${localResources.map { case (k, v) => s"    $k -> $v\n" }.mkString}
@@ -202,12 +204,13 @@ private[yarn] class ExecutorRunnable(
     val commands = prefixEnv ++
       Seq(Environment.JAVA_HOME.$$() + "/bin/java", "-server") ++
       javaOpts ++
-      Seq("org.apache.spark.executor.CoarseGrainedExecutorBackend",
+      Seq("org.apache.spark.executor.YarnCoarseGrainedExecutorBackend",
         "--driver-url", masterAddress,
         "--executor-id", executorId,
         "--hostname", hostname,
         "--cores", executorCores.toString,
-        "--app-id", appId) ++
+        "--app-id", appId,
+        "--resourceProfileId", resourceProfileId.toString) ++
       userClassPath ++
       Seq(
         s"1>${ApplicationConstants.LOG_DIR_EXPANSION_VAR}/stdout",
@@ -232,21 +235,6 @@ private[yarn] class ExecutorRunnable(
       } else {
         // For other env variables, simply overwrite the value.
         env(key) = value
-      }
-    }
-
-    // Add log urls, as well as executor attributes
-    container.foreach { c =>
-      YarnContainerInfoHelper.getLogUrls(conf, Some(c)).foreach { m =>
-        m.foreach { case (fileName, url) =>
-          env("SPARK_LOG_URL_" + fileName.toUpperCase(Locale.ROOT)) = url
-        }
-      }
-
-      YarnContainerInfoHelper.getAttributes(conf, Some(c)).foreach { m =>
-        m.foreach { case (attr, value) =>
-          env("SPARK_EXECUTOR_ATTRIBUTE_" + attr.toUpperCase(Locale.ROOT)) = value
-        }
       }
     }
 
