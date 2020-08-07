@@ -22,15 +22,14 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.{ControlThrowable, NonFatal}
-
 import com.codahale.metrics.{Gauge, MetricRegistry}
-
-import org.apache.spark.internal.{config, Logging}
+import org.apache.spark.internal.{Logging, config}
 import org.apache.spark.internal.config._
 import org.apache.spark.internal.config.Tests.TEST_SCHEDULE_INTERVAL
 import org.apache.spark.metrics.source.Source
 import org.apache.spark.scheduler._
 import org.apache.spark.scheduler.dynalloc.ExecutorMonitor
+import org.apache.spark.storage.BlockManagerMaster
 import org.apache.spark.util.{Clock, SystemClock, ThreadUtils, Utils}
 
 /**
@@ -96,7 +95,7 @@ private[spark] class ExecutorAllocationManager(
     listenerBus: LiveListenerBus,
     conf: SparkConf,
     mapOutputTracker: MapOutputTrackerMaster,
-    blockManagerMaster: BlockManagerMaster)
+    blockManagerMaster: BlockManagerMaster,
     cleaner: Option[ContextCleaner] = None,
     clock: Clock = new SystemClock())
   extends Logging {

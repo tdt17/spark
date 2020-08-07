@@ -52,7 +52,6 @@ import org.apache.spark.network.crypto.AuthServerBootstrap;
 import org.apache.spark.network.sasl.ShuffleSecretManager;
 import org.apache.spark.network.server.TransportServer;
 import org.apache.spark.network.server.TransportServerBootstrap;
-import org.apache.spark.network.shuffle.ExternalShuffleBlockHandler;
 import org.apache.spark.network.util.LevelDBProvider;
 import org.apache.spark.network.shuffle.ExternalBlockHandler;
 import org.apache.spark.network.util.TransportConf;

@@ -149,6 +149,7 @@
     <jetty.version>9.4.12.v20180830</jetty.version>
     <orc.version>1.5.10</orc.version>
     <orc.classifier>nohive</orc.classifier>
+    <hive.parquet.group>com.twitter</hive.parquet.group>
     <hive.parquet.version>1.6.0</hive.parquet.version>
     <jetty.version>9.4.18.v20190429</jetty.version>
     <javaxservlet.version>3.1.0</javaxservlet.version>
@@ -629,17 +630,6 @@
         <version>${commons.collections.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-beanutils</groupId>
-        <artifactId>commons-beanutils</artifactId>
-        <version>1.9.4</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <!-- Hive uses commons-logging 1.1.3 from 0.13 to 1.2 -->
-        <version>1.1.3</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.ivy</groupId>
         <artifactId>ivy</artifactId>
         <version>${ivy.version}</version>
@@ -827,11 +817,11 @@
         <artifactId>metrics-graphite</artifactId>
         <version>${dropwizard.metrics.version}</version>
       </dependency>
-      <dependency>
-        <groupId>io.dropwizard.metrics</groupId>
-        <artifactId>metrics-jmx</artifactId>
-        <version>${dropwizard.metrics.version}</version>
-      </dependency>
+<!--      <dependency>-->
+<!--        <groupId>io.dropwizard.metrics</groupId>-->
+<!--        <artifactId>metrics-jmx</artifactId>-->
+<!--        <version>${dropwizard.metrics.version}</version>-->
+<!--      </dependency>-->
       <dependency>
         <groupId>io.dropwizard</groupId>
         <artifactId>dropwizard-metrics</artifactId>
