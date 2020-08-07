@@ -23,7 +23,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.{ControlThrowable, NonFatal}
 import com.codahale.metrics.{Gauge, MetricRegistry}
-import org.apache.spark.internal.{Logging, config}
+
+import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
 import org.apache.spark.internal.config.Tests.TEST_SCHEDULE_INTERVAL
 import org.apache.spark.metrics.source.Source
@@ -123,8 +124,6 @@ private[spark] class ExecutorAllocationManager(
 
   private val inactiveShuffleExecutorIdleTimeoutS = conf.getTimeAsSeconds(
     "spark.dynamicAllocation.inactiveShuffleExecutorIdleTimeout", s"${Integer.MAX_VALUE}s")
-
-  private val externalShuffleServiceEnabled = conf.get(config.SHUFFLE_SERVICE_ENABLED)
 
   // During testing, the methods to actually kill and add executors are mocked out
   private val testing = conf.get(DYN_ALLOCATION_TESTING)
@@ -517,7 +516,7 @@ private[spark] class ExecutorAllocationManager(
    */
   private def onExecutorIdle(executorId: String): Unit = synchronized {
     if (executorIds.contains(executorId)) {
-      val hasActiveShuffleBlocks = !externalShuffleServiceEnabled &&
+      val hasActiveShuffleBlocks =
         mapOutputTracker.hasOutputsOnExecutor(executorId, activeOnly = true)
       if (!removeTimes.contains(executorId)
         && !executorsPendingToRemove.contains(executorId)
@@ -526,8 +525,7 @@ private[spark] class ExecutorAllocationManager(
         // blocks we are concerned with are reported to the driver. Note that this
         // does not include broadcast blocks.
         val hasCachedBlocks = blockManagerMaster.hasCachedBlocks(executorId)
-        val hasAnyShuffleBlocks =
-          !externalShuffleServiceEnabled && mapOutputTracker.hasOutputsOnExecutor(executorId)
+        val hasAnyShuffleBlocks = mapOutputTracker.hasOutputsOnExecutor(executorId)
         val now = clock.getTimeMillis()
 
         // Use the maximum of all the timeouts that apply.
