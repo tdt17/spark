@@ -92,10 +92,6 @@ private[spark] class TaskSchedulerImpl(
   private val speculationScheduler =
     ThreadUtils.newDaemonSingleThreadScheduledExecutor("task-scheduler-speculation")
 
-  // whether to prefer assigning tasks to executors that contain shuffle files
-  val shuffleBiasedTaskSchedulingEnabled =
-    conf.getBoolean("spark.scheduler.shuffleBiasedTaskScheduling.enabled", false)
-
   // Threshold above which we warn user initial TaskSet may be starved
   val STARVATION_TIMEOUT_MS = conf.getTimeAsMs("spark.starvation.timeout", "15s")
 
@@ -193,7 +189,7 @@ private[spark] class TaskSchedulerImpl(
           new FairSchedulableBuilder(rootPool, conf)
         case _ =>
           throw new IllegalArgumentException(s"Unsupported $SCHEDULER_MODE_PROPERTY: " +
-          s"$schedulingMode")
+            s"$schedulingMode")
       }
     }
     schedulableBuilder.buildPools()
@@ -207,7 +203,9 @@ private[spark] class TaskSchedulerImpl(
     if (!isLocal && conf.get(SPECULATION_ENABLED)) {
       logInfo("Starting speculative execution thread")
       speculationScheduler.scheduleWithFixedDelay(
-        () => Utils.tryOrStopSparkContext(sc) { checkSpeculatableTasks() },
+        () => Utils.tryOrStopSparkContext(sc) {
+          checkSpeculatableTasks()
+        },
         SPECULATION_INTERVAL_MS, SPECULATION_INTERVAL_MS, TimeUnit.MILLISECONDS)
     }
   }
@@ -260,8 +258,8 @@ private[spark] class TaskSchedulerImpl(
 
   // Label as private[scheduler] to allow tests to swap in different task set managers if necessary
   private[scheduler] def createTaskSetManager(
-      taskSet: TaskSet,
-      maxTaskFailures: Int): TaskSetManager = {
+                                               taskSet: TaskSet,
+                                               maxTaskFailures: Int): TaskSetManager = {
     new TaskSetManager(this, taskSet, maxTaskFailures, blacklistTrackerOpt)
   }
 
@@ -279,9 +277,9 @@ private[spark] class TaskSchedulerImpl(
   }
 
   override def killTaskAttempt(
-      taskId: Long,
-      interruptThread: Boolean,
-      reason: String): Boolean = synchronized {
+                                taskId: Long,
+                                interruptThread: Boolean,
+                                reason: String): Boolean = synchronized {
     logInfo(s"Killing task $taskId: $reason")
     val execId = taskIdToExecutorId.get(taskId)
     if (execId.isDefined) {
@@ -294,9 +292,9 @@ private[spark] class TaskSchedulerImpl(
   }
 
   override def killAllTaskAttempts(
-      stageId: Int,
-      interruptThread: Boolean,
-      reason: String): Unit = synchronized {
+                                    stageId: Int,
+                                    interruptThread: Boolean,
+                                    reason: String): Unit = synchronized {
     logInfo(s"Killing all running tasks in stage $stageId: $reason")
     taskSetsByStageIdAndAttempt.get(stageId).foreach { attempts =>
       attempts.foreach { case (_, tsm) =>
@@ -336,13 +334,13 @@ private[spark] class TaskSchedulerImpl(
   }
 
   private def resourceOfferSingleTaskSet(
-      taskSet: TaskSetManager,
-      maxLocality: TaskLocality,
-      shuffledOffers: Seq[WorkerOffer],
-      availableCpus: Array[Int],
-      availableResources: Array[Map[String, Buffer[String]]],
-      tasks: IndexedSeq[ArrayBuffer[TaskDescription]],
-      addressesWithDescs: ArrayBuffer[(String, TaskDescription)]) : Boolean = {
+                                          taskSet: TaskSetManager,
+                                          maxLocality: TaskLocality,
+                                          shuffledOffers: Seq[WorkerOffer],
+                                          availableCpus: Array[Int],
+                                          availableResources: Array[Map[String, Buffer[String]]],
+                                          tasks: IndexedSeq[ArrayBuffer[TaskDescription]],
+                                          addressesWithDescs: ArrayBuffer[(String, TaskDescription)]): Boolean = {
     var launchedTask = false
     // nodes and executors that are blacklisted for the entire application have already been
     // filtered out by this point
@@ -435,12 +433,10 @@ private[spark] class TaskSchedulerImpl(
     val shuffledOffers = shuffleOffers(filteredOffers)
     // Build a list of tasks to assign to each worker.
     val tasks = shuffledOffers.map(o => new ArrayBuffer[TaskDescription](o.cores / CPUS_PER_TASK))
-
-    // TODO(@jcasale) https://github.com/palantir/spark/pull/447 remove?
-    // var tasks: Seq[Seq[TaskDescription]] = Nil
     val availableResources = shuffledOffers.map(_.resources).toArray
     val availableCpus = shuffledOffers.map(o => o.cores).toArray
-    val sortedTaskSets = rootPool.getSortedTaskSetQueue.filterNot(_.isZombie)
+    val availableSlots = shuffledOffers.map(o => o.cores / CPUS_PER_TASK).sum
+    val sortedTaskSets = rootPool.getSortedTaskSetQueue
     for (taskSet <- sortedTaskSets) {
       logDebug("parentName: %s, name: %s, runningTasks: %s".format(
         taskSet.parent.name, taskSet.name, taskSet.runningTasks))
@@ -449,36 +445,10 @@ private[spark] class TaskSchedulerImpl(
       }
     }
 
-    // If shuffle-biased task scheduling is enabled, then first assign as many tasks as possible to
-    // executors containing active shuffle files, followed by assigning to executors with inactive
-    // shuffle files, and then finally to those without shuffle files. This bin packing allows for
-    // more efficient dynamic allocation in the absence of an external shuffle service.
-    val partitionedAndShuffledOffers = partitionAndShuffleOffers(filteredOffers)
-    for (shuffledOffers <- partitionedAndShuffledOffers.map(_._2)) {
-      tasks ++= doResourceOffers(shuffledOffers, sortedTaskSets)
-    }
-
-    // TODO SPARK-24823 Cancel a job that contains barrier stage(s) if the barrier tasks don't get
-    // launched within a configured time.
-    if (tasks.size > 0) {
-      hasLaunchedTask = true
-    }
-    return tasks
-  }
-
-  private def doResourceOffers(
-      shuffledOffers: IndexedSeq[WorkerOffer],
-      sortedTaskSets: IndexedSeq[TaskSetManager]): Seq[Seq[TaskDescription]] = {
-    // Build a list of tasks to assign to each worker.
-    val tasks = shuffledOffers.map(o => new ArrayBuffer[TaskDescription](o.cores / CPUS_PER_TASK))
-    val availableCpus = shuffledOffers.map(o => o.cores).toArray
-    val availableSlots = shuffledOffers.map(o => o.cores / CPUS_PER_TASK).sum
-
     // Take each TaskSet in our scheduling order, and then offer it each node in increasing order
     // of locality levels so that it gets a chance to launch local tasks on all of them.
     // NOTE: the preferredLocality order: PROCESS_LOCAL, NODE_LOCAL, NO_PREF, RACK_LOCAL, ANY
     for (taskSet <- sortedTaskSets) {
-      val availableSlots = availableCpus.map(c => c / CPUS_PER_TASK).sum
       // Skip the barrier taskSet if the available slots are less than the number of pending tasks.
       if (taskSet.isBarrier && availableSlots < taskSet.numTasks) {
         // Skip the launch process.
@@ -503,35 +473,35 @@ private[spark] class TaskSchedulerImpl(
 
         if (!launchedAnyTask) {
           taskSet.getCompletelyBlacklistedTaskIfAny(hostToExecutors).foreach { taskIndex =>
-              // If the taskSet is unschedulable we try to find an existing idle blacklisted
-              // executor. If we cannot find one, we abort immediately. Else we kill the idle
-              // executor and kick off an abortTimer which if it doesn't schedule a task within the
-              // the timeout will abort the taskSet if we were unable to schedule any task from the
-              // taskSet.
-              // Note 1: We keep track of schedulability on a per taskSet basis rather than on a per
-              // task basis.
-              // Note 2: The taskSet can still be aborted when there are more than one idle
-              // blacklisted executors and dynamic allocation is on. This can happen when a killed
-              // idle executor isn't replaced in time by ExecutorAllocationManager as it relies on
-              // pending tasks and doesn't kill executors on idle timeouts, resulting in the abort
-              // timer to expire and abort the taskSet.
-              executorIdToRunningTaskIds.find(x => !isExecutorBusy(x._1)) match {
-                case Some ((executorId, _)) =>
-                  if (!unschedulableTaskSetToExpiryTime.contains(taskSet)) {
-                    blacklistTrackerOpt.foreach(blt => blt.killBlacklistedIdleExecutor(executorId))
+            // If the taskSet is unschedulable we try to find an existing idle blacklisted
+            // executor. If we cannot find one, we abort immediately. Else we kill the idle
+            // executor and kick off an abortTimer which if it doesn't schedule a task within the
+            // the timeout will abort the taskSet if we were unable to schedule any task from the
+            // taskSet.
+            // Note 1: We keep track of schedulability on a per taskSet basis rather than on a per
+            // task basis.
+            // Note 2: The taskSet can still be aborted when there are more than one idle
+            // blacklisted executors and dynamic allocation is on. This can happen when a killed
+            // idle executor isn't replaced in time by ExecutorAllocationManager as it relies on
+            // pending tasks and doesn't kill executors on idle timeouts, resulting in the abort
+            // timer to expire and abort the taskSet.
+            executorIdToRunningTaskIds.find(x => !isExecutorBusy(x._1)) match {
+              case Some((executorId, _)) =>
+                if (!unschedulableTaskSetToExpiryTime.contains(taskSet)) {
+                  blacklistTrackerOpt.foreach(blt => blt.killBlacklistedIdleExecutor(executorId))
 
-                    val timeout = conf.get(config.UNSCHEDULABLE_TASKSET_TIMEOUT) * 1000
-                    unschedulableTaskSetToExpiryTime(taskSet) = clock.getTimeMillis() + timeout
-                    logInfo(s"Waiting for $timeout ms for completely "
-                      + s"blacklisted task to be schedulable again before aborting $taskSet.")
-                    abortTimer.schedule(
-                      createUnschedulableTaskSetAbortTimer(taskSet, taskIndex), timeout)
-                  }
-                case None => // Abort Immediately
-                  logInfo("Cannot schedule any task because of complete blacklisting. No idle" +
-                    s" executors can be found to kill. Aborting $taskSet." )
-                  taskSet.abortSinceCompletelyBlacklisted(taskIndex)
-              }
+                  val timeout = conf.get(config.UNSCHEDULABLE_TASKSET_TIMEOUT) * 1000
+                  unschedulableTaskSetToExpiryTime(taskSet) = clock.getTimeMillis() + timeout
+                  logInfo(s"Waiting for $timeout ms for completely "
+                    + s"blacklisted task to be schedulable again before aborting $taskSet.")
+                  abortTimer.schedule(
+                    createUnschedulableTaskSetAbortTimer(taskSet, taskIndex), timeout)
+                }
+              case None => // Abort Immediately
+                logInfo("Cannot schedule any task because of complete blacklisting. No idle" +
+                  s" executors can be found to kill. Aborting $taskSet.")
+                taskSet.abortSinceCompletelyBlacklisted(taskIndex)
+            }
           }
         } else {
           // We want to defer killing any taskSets as long as we have a non blacklisted executor
@@ -575,47 +545,27 @@ private[spark] class TaskSchedulerImpl(
             .mkString(",")
           addressesWithDescs.foreach(_._2.properties.setProperty("addresses", addressesStr))
 
-          logInfo(s"Successfully scheduled all the ${addressesWithDescs.size} tasks for " +
-            s"barrier stage ${taskSet.stageId}.")
+          logInfo(s"Successfully scheduled all the ${addressesWithDescs.size} tasks for barrier " +
+            s"stage ${taskSet.stageId}.")
         }
       }
     }
-    tasks
-  }
 
-// TODO(@jcasale) https://github.com/palantir/spark/pull/447 revert?
-//  /**
-//   * Shuffle offers around to avoid always placing tasks on the same workers.
-//   * If shuffle-biased task scheduling is enabled, this function partitions the offers based on
-//   * whether they have active/inactive/no shuffle files present.
-//   */
-//  def partitionAndShuffleOffers(offers: IndexedSeq[WorkerOffer])
-//  : IndexedSeq[(ExecutorShuffleStatus.Value, IndexedSeq[WorkerOffer])] = {
-//    if (shuffleBiasedTaskSchedulingEnabled && offers.length > 1) {
-//      // bias towards executors that have active shuffle outputs
-//      val execShuffles = mapOutputTracker.getExecutorShuffleStatus
-//      offers
-//        .groupBy(offer => execShuffles.getOrElse(offer.executorId, ExecutorShuffleStatus.Unknown))
-//        .mapValues(doShuffleOffers)
-//        .toStream
-//        .sortBy(_._1) // order: Active, Inactive, Unknown
-//        .toIndexedSeq
-//    } else {
-//      IndexedSeq((ExecutorShuffleStatus.Unknown, doShuffleOffers(offers)))
     // TODO SPARK-24823 Cancel a job that contains barrier stage(s) if the barrier tasks don't get
     // launched within a configured time.
-    if (tasks.nonEmpty) {
+    if (tasks.size > 0) {
       hasLaunchedTask = true
     }
+    return tasks
   }
 
   private def createUnschedulableTaskSetAbortTimer(
-      taskSet: TaskSetManager,
-      taskIndex: Int): TimerTask = {
+                                                    taskSet: TaskSetManager,
+                                                    taskIndex: Int): TimerTask = {
     new TimerTask() {
       override def run(): Unit = TaskSchedulerImpl.this.synchronized {
         if (unschedulableTaskSetToExpiryTime.contains(taskSet) &&
-            unschedulableTaskSetToExpiryTime(taskSet) <= clock.getTimeMillis()) {
+          unschedulableTaskSetToExpiryTime(taskSet) <= clock.getTimeMillis()) {
           logInfo("Cannot schedule any task because of complete blacklisting. " +
             s"Wait time for scheduling expired. Aborting $taskSet.")
           taskSet.abortSinceCompletelyBlacklisted(taskIndex)
@@ -627,10 +577,10 @@ private[spark] class TaskSchedulerImpl(
   }
 
   /**
-   * Does the shuffling for [[partitionAndShuffleOffers()]]. Exposed to allow overriding in tests,
-   * so that it can be deterministic.
+   * Shuffle offers around to avoid always placing tasks on the same workers.  Exposed to allow
+   * overriding in tests, so it can be deterministic.
    */
-  protected def doShuffleOffers(offers: IndexedSeq[WorkerOffer]): IndexedSeq[WorkerOffer] = {
+  protected def shuffleOffers(offers: IndexedSeq[WorkerOffer]): IndexedSeq[WorkerOffer] = {
     Random.shuffle(offers)
   }
 
