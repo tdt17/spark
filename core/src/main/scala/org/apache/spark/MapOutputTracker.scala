@@ -118,7 +118,7 @@ private class ShuffleStatus(numPartitions: Int) {
       _numAvailableOutputs += 1
       invalidateSerializedMapOutputStatusCache()
     }
-    mapStatuses(mapIndex) = status
+    mapStatuses(mapId) = status
   }
 
   /**

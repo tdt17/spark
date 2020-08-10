@@ -73,8 +73,6 @@ class SparkEnv (
     val conf: SparkConf) extends Logging {
 
   @volatile private[spark] var isStopped = false
-  private val pythonWorkers = mutable.HashMap[(String, Map[String, String]), PythonWorkerFactory]()
-
   case class PythonWorkerKey(pythonExec: Option[String], envVars: Map[String, String],
                              condaInstructions: Option[CondaSetupInstructions])
   private val pythonWorkers = mutable.HashMap[PythonWorkerKey, PythonWorkerFactory]()
