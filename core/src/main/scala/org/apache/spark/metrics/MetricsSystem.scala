@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.collection.mutable
 
-import com.codahale.metrics.{Metric, MetricRegistry}
+import com.codahale.metrics._
 import org.eclipse.jetty.servlet.ServletContextHandler
 
 import org.apache.spark.{SecurityManager, SparkConf}
@@ -165,7 +165,6 @@ private[spark] class MetricsSystem private (
     sourceToListeners.keySet.filter(_.sourceName == sourceName).toSeq
 
   def registerSource(source: Source): Unit = {
-    sources += source
     try {
       val listener = new MetricsSystemListener(buildRegistryName(source))
       source.metricRegistry.addListener(listener)

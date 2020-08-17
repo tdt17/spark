@@ -704,7 +704,7 @@ class ExecutorAllocationManagerSuite extends SparkFunSuite {
 
   test("starting/canceling remove timers") {
     val clock = new ManualClock(14444L)
-    val manager = createManager(createConf((2, 10, 2)), clock)
+    val manager = createManager(createConf(2, 10, 2), clock)
 
     executorIds(manager).asInstanceOf[mutable.Set[String]] ++= List("1", "2", "3")
 

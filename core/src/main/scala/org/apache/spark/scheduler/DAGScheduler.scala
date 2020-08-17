@@ -1953,24 +1953,6 @@ private[spark] class DAGScheduler(
       case Some(t) => "%.03f".format((clock.getTimeMillis() - t) / 1000.0)
       case _ => "Unknown"
     }
-
-    getShuffleDependencies(stage.rdd).foreach { shuffleDep =>
-      val shuffleId = shuffleDep.shuffleId
-      if (!shuffleIdToDependentStages.contains(shuffleId)) {
-        logDebug("Stage finished with untracked shuffle dependency " + shuffleId)
-      } else {
-        var dependentStages = shuffleIdToDependentStages(shuffleId)
-        dependentStages -= stage.id;
-        logDebug("Stage " + stage.id + " finished.  " +
-          "Shuffle " + shuffleId + " now has dependencies " + dependentStages)
-        if (dependentStages.isEmpty) {
-          logDebug("Shuffle " + shuffleId + " is no longer needed.  Marking it inactive.")
-          shuffleIdToDependentStages.remove(shuffleId)
-          mapOutputTracker.markShuffleInactive(shuffleId)
-        }
-      }
-    }
-
     if (errorMessage.isEmpty) {
       logInfo("%s (%s) finished in %s s".format(stage, stage.name, serviceTime))
       stage.latestInfo.completionTime = Some(clock.getTimeMillis())
