@@ -275,13 +275,13 @@ private[spark] class Executor(
         metricsPoller.stop()
       } catch {
         case NonFatal(e) =>
-          logWarning("Unable to stop executor metrics poller", e)
+          safeLogWarning("Unable to stop executor metrics poller", e)
       }
       try {
         heartbeater.stop()
       } catch {
         case NonFatal(e) =>
-          logWarning("Unable to stop heartbeater", e)
+          safeLogWarning("Unable to stop heartbeater", e)
       }
       threadPool.shutdown()
 
@@ -656,7 +656,10 @@ private[spark] class Executor(
         case t: Throwable if env.isStopped =>
           // Log the expected exception after executor.stop without stack traces
           // see: SPARK-19147
-          logError(s"Exception in $taskName (TID $taskId): ${t.getMessage}")
+          safeLogError("Exception in task",
+            SafeArg.of("taskName", taskName),
+            SafeArg.of("taskId", taskId),
+            SafeArg.of("taskErrorMessage", t.getMessage))
 
         case t: Throwable =>
           // Attempt to exit cleanly by informing the driver of our failure.

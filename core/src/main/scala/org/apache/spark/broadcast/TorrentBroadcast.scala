@@ -252,7 +252,7 @@ private[spark] class TorrentBroadcast[T: ClassTag](obj: T, id: Long)
             val blocks = readBlocks()
             safeLogInfo("Reading broadcast variable finished",
               SafeArg.of("id", id),
-              SafeArg.of("timeUsed", Utils.getUsedTimeNs(startTimeMs)))
+              SafeArg.of("timeUsed", Utils.getUsedTimeNs(startTimeNs)))
 
             try {
               val obj = TorrentBroadcast.unBlockifyObject[T](

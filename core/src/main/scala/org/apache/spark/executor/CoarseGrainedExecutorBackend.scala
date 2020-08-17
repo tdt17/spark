@@ -122,7 +122,7 @@ private[spark] class CoarseGrainedExecutorBackend(
     // use a classloader that includes the user classpath in case they specified a class for
     // resource discovery
     val urlClassLoader = createClassLoader()
-    logDebug(s"Resource profile id is: ${resourceProfile.id}")
+    safeLogDebug("Resource profile id:", SafeArg.of("resourceProfileId", resourceProfile.id))
     Utils.withContextClassLoader(urlClassLoader) {
       val resources = getOrDiscoverAllResourcesForResourceProfile(
         resourcesFileOpt,
