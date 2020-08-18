@@ -58,8 +58,6 @@ abstract class Optimizer(catalogManager: CatalogManager)
       SQLConf.get.optimizerMaxIterations,
       maxIterationsSetting = SQLConf.OPTIMIZER_MAX_ITERATIONS.key)
 
-  protected def fixedPoint = FixedPoint(SQLConf.get.optimizerMaxIterations)
-
   /**
    * Defines the default rule batches in the Optimizer.
    *

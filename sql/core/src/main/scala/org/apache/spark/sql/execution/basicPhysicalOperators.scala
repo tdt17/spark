@@ -758,9 +758,6 @@ case class SubqueryExec(name: String, child: SparkPlan)
       // This will run in another thread. Set the execution id so that we can connect these jobs
       // with the correct execution.
       SQLExecution.withExecutionId(sqlContext.sparkSession, executionId) {
-  private lazy val relationFuture: Future[Array[InternalRow]] = {
-    Futures.withLocalProperties(sparkContext) {
-      SQLExecution.withSQLConfPropagated(sqlContext.sparkSession) {
         val beforeCollect = System.nanoTime()
         // Note that we use .executeCollect() because we don't want to convert data to Scala types
         val rows: Array[InternalRow] = child.executeCollect()
@@ -769,17 +766,10 @@ case class SubqueryExec(name: String, child: SparkPlan)
         val dataSize = rows.map(_.asInstanceOf[UnsafeRow].getSizeInBytes.toLong).sum
         longMetric("dataSize") += dataSize
 
-        SQLMetrics.postDriverMetricUpdates(
-          sparkContext,
-          sparkContext.getLocalProperty(SQLExecution.EXECUTION_ID_KEY),
-          metrics.values.toSeq)
+        SQLMetrics.postDriverMetricUpdates(sparkContext, executionId, metrics.values.toSeq)
         rows
       }
     }
-  }
-
-  protected override def doCanonicalize(): SparkPlan = {
-    SubqueryExec("Subquery", child.canonicalized)
   }
 
   protected override def doCanonicalize(): SparkPlan = {
@@ -802,9 +792,9 @@ case class SubqueryExec(name: String, child: SparkPlan)
 }
 
 object SubqueryExec {
-  private[spark] val THREADS = 16
   private[execution] val executionContext = ExecutionContext.fromExecutorService(
-    ThreadUtils.newDaemonCachedThreadPool("subquery", THREADS))
+    ThreadUtils.newDaemonCachedThreadPool("subquery",
+      SQLConf.get.getConf(StaticSQLConf.SUBQUERY_MAX_THREAD_THRESHOLD)))
 }
 
 /**

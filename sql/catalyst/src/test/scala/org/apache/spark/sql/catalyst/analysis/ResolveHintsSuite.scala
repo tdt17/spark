@@ -30,14 +30,6 @@ import org.apache.spark.sql.types.IntegerType
 class ResolveHintsSuite extends AnalysisTest {
   import org.apache.spark.sql.catalyst.analysis.TestRelations._
 
-  class MockAppender extends AppenderSkeleton {
-    val loggingEvents = new ArrayBuffer[LoggingEvent]()
-
-    override def append(loggingEvent: LoggingEvent): Unit = loggingEvents.append(loggingEvent)
-    override def close(): Unit = {}
-    override def requiresLayout(): Boolean = false
-  }
-
   test("invalid hints should be ignored") {
     checkAnalysis(
       UnresolvedHint("some_random_hint_that_does_not_exist", Seq("TaBlE"), table("TaBlE")),
@@ -301,18 +293,5 @@ class ResolveHintsSuite extends AnalysisTest {
           JoinHint.NONE),
         caseSensitive = true)
     }
-  }
-
-  test("log warnings for invalid hints") {
-    val logAppender = new MockAppender()
-    withLogAppender(logAppender) {
-      checkAnalysis(
-        UnresolvedHint("unknown_hint", Seq("TaBlE"), table("TaBlE")),
-        testRelation,
-        caseSensitive = false)
-    }
-    assert(logAppender.loggingEvents.exists(
-      e => e.getLevel == Level.WARN &&
-        e.getRenderedMessage.contains("Unrecognized hint: unknown_hint")))
   }
 }

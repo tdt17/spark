@@ -37,9 +37,6 @@ abstract class PlanExpression[T <: QueryPlan[_]] extends Expression {
   /** Updates the expression with a new plan. */
   def withNewPlan(plan: T): PlanExpression[T]
 
-  /** Defines how the canonicalization should work for this expression. */
-  def canonicalize(attrs: AttributeSeq): PlanExpression[T]
-
   protected def conditionString: String = children.mkString("[", " && ", "]")
 }
 

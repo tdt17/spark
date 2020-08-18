@@ -151,7 +151,12 @@ case class ShuffleQueryStageExec(
   override def doMaterialize(): Future[Any] = attachTree(this, "execute") {
     shuffle.mapOutputStatisticsFuture
   }
-}
+
+  override def newReuseInstance(newStageId: Int, newOutput: Seq[Attribute]): QueryStageExec = {
+    ShuffleQueryStageExec(
+      newStageId,
+      ReusedExchangeExec(newOutput, shuffle))
+  }
 
   override def cancel(): Unit = {
     shuffle.mapOutputStatisticsFuture match {

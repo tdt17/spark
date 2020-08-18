@@ -42,7 +42,7 @@ class DateTimeUtilsSuite extends SparkFunSuite with Matchers with SQLHelper {
       val parsedTimestampOp = DateTimeUtils.stringToTimestamp(
         UTF8String.fromString(originalTime), defaultZoneId)
       assert(parsedTimestampOp.isDefined, "timestamp with nanoseconds was not parsed correctly")
-      assert(DateTimeUtils.timestampToString(parsedTimestampOp.get) === expectedParsedTime)
+      assert(DateTimeUtils.timestampToString(tf, parsedTimestampOp.get) === expectedParsedTime)
     }
 
     checkStringToTimestamp("2015-01-02 00:00:00.123456789", "2015-01-02 00:00:00.123456")
@@ -151,38 +151,6 @@ class DateTimeUtilsSuite extends SparkFunSuite with Matchers with SQLHelper {
 
   private def toTimestamp(str: String, zoneId: ZoneId): Option[SQLTimestamp] = {
     stringToTimestamp(UTF8String.fromString(str), zoneId)
-  }
-
-  test("string to time") {
-    // Tests with UTC.
-    val c = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-    c.set(Calendar.MILLISECOND, 0)
-
-    c.set(1900, 0, 1, 0, 0, 0)
-    assert(stringToTime("1900-01-01T00:00:00GMT-00:00") === c.getTime())
-
-    c.set(2000, 11, 30, 10, 0, 0)
-    assert(stringToTime("2000-12-30T10:00:00Z") === c.getTime())
-
-    // Tests with set time zone.
-    c.setTimeZone(TimeZone.getTimeZone("GMT-04:00"))
-    c.set(Calendar.MILLISECOND, 0)
-
-    c.set(1900, 0, 1, 0, 0, 0)
-    assert(stringToTime("1900-01-01T00:00:00-04:00") === c.getTime())
-
-    c.set(1900, 0, 1, 0, 0, 0)
-    assert(stringToTime("1900-01-01T00:00:00GMT-04:00") === c.getTime())
-
-    // Tests with local time zone.
-    c.setTimeZone(TimeZone.getDefault())
-    c.set(Calendar.MILLISECOND, 0)
-
-    c.set(2000, 11, 30, 0, 0, 0)
-    assert(stringToTime("2000-12-30") === new Date(c.getTimeInMillis()))
-
-    c.set(2000, 11, 30, 10, 0, 0)
-    assert(stringToTime("2000-12-30 10:00:00") === new Timestamp(c.getTimeInMillis()))
   }
 
   test("string to timestamp") {
@@ -376,73 +344,45 @@ class DateTimeUtilsSuite extends SparkFunSuite with Matchers with SQLHelper {
   }
 
   test("get day in year") {
-    val c = Calendar.getInstance()
-    c.set(2015, 2, 18, 0, 0, 0)
-    assert(getDayInYear(getInUTCDays(c.getTimeInMillis)) === 77)
-    c.set(2012, 2, 18, 0, 0, 0)
-    assert(getDayInYear(getInUTCDays(c.getTimeInMillis)) === 78)
+    assert(getDayInYear(days(2015, 3, 18)) === 77)
+    assert(getDayInYear(days(2012, 3, 18)) === 78)
   }
 
-  test("SPARK-26002: correct day of year calculations for Julian calendar years") {
-    val c = Calendar.getInstance()
-    c.set(Calendar.MILLISECOND, 0)
-    (1000 to 1600 by 100).foreach { year =>
+  test("day of year calculations for old years") {
+    assert(getDayInYear(days(1582, 3)) === 60)
+
+    (1000 to 1600 by 10).foreach { year =>
       // January 1 is the 1st day of year.
-      c.set(year, 0, 1, 0, 0, 0)
-      assert(getYear(getInUTCDays(c.getTimeInMillis)) === year)
-      assert(getMonth(getInUTCDays(c.getTimeInMillis)) === 1)
-      assert(getDayInYear(getInUTCDays(c.getTimeInMillis)) === 1)
+      assert(getYear(days(year)) === year)
+      assert(getMonth(days(year, 1)) === 1)
+      assert(getDayInYear(days(year, 1, 1)) === 1)
 
-      // March 1 is the 61st day of the year as they are leap years. It is true for
-      // even the multiples of 100 as before 1582-10-4 the Julian calendar leap year calculation
-      // is used in which every multiples of 4 are leap years
-      c.set(year, 2, 1, 0, 0, 0)
-      assert(getDayInYear(getInUTCDays(c.getTimeInMillis)) === 61)
-      assert(getMonth(getInUTCDays(c.getTimeInMillis)) === 3)
-
-      // testing leap day (February 29) in leap years
-      c.set(year, 1, 29, 0, 0, 0)
-      assert(getDayInYear(getInUTCDays(c.getTimeInMillis)) === 60)
-
-      // For non-leap years:
-      c.set(year + 1, 2, 1, 0, 0, 0)
-      assert(getDayInYear(getInUTCDays(c.getTimeInMillis)) === 60)
+      // December 31 is the 1st day of year.
+      val date = days(year, 12, 31)
+      assert(getYear(date) === year)
+      assert(getMonth(date) === 12)
+      assert(getDayOfMonth(date) === 31)
     }
-
-    c.set(1582, 2, 1, 0, 0, 0)
-    assert(getDayInYear(getInUTCDays(c.getTimeInMillis)) === 60)
   }
 
   test("get year") {
-    val c = Calendar.getInstance()
-    c.set(2015, 2, 18, 0, 0, 0)
-    assert(getYear(getInUTCDays(c.getTimeInMillis)) === 2015)
-    c.set(2012, 2, 18, 0, 0, 0)
-    assert(getYear(getInUTCDays(c.getTimeInMillis)) === 2012)
+    assert(getYear(days(2015, 2, 18)) === 2015)
+    assert(getYear(days(2012, 2, 18)) === 2012)
   }
 
   test("get quarter") {
-    val c = Calendar.getInstance()
-    c.set(2015, 2, 18, 0, 0, 0)
-    assert(getQuarter(getInUTCDays(c.getTimeInMillis)) === 1)
-    c.set(2012, 11, 18, 0, 0, 0)
-    assert(getQuarter(getInUTCDays(c.getTimeInMillis)) === 4)
+    assert(getQuarter(days(2015, 2, 18)) === 1)
+    assert(getQuarter(days(2012, 11, 18)) === 4)
   }
 
   test("get month") {
-    val c = Calendar.getInstance()
-    c.set(2015, 2, 18, 0, 0, 0)
-    assert(getMonth(getInUTCDays(c.getTimeInMillis)) === 3)
-    c.set(2012, 11, 18, 0, 0, 0)
-    assert(getMonth(getInUTCDays(c.getTimeInMillis)) === 12)
+    assert(getMonth(days(2015, 3, 18)) === 3)
+    assert(getMonth(days(2012, 12, 18)) === 12)
   }
 
   test("get day of month") {
-    val c = Calendar.getInstance()
-    c.set(2015, 2, 18, 0, 0, 0)
-    assert(getDayOfMonth(getInUTCDays(c.getTimeInMillis)) === 18)
-    c.set(2012, 11, 24, 0, 0, 0)
-    assert(getDayOfMonth(getInUTCDays(c.getTimeInMillis)) === 24)
+    assert(getDayOfMonth(days(2015, 3, 18)) === 18)
+    assert(getDayOfMonth(days(2012, 12, 24)) === 24)
   }
 
   test("date add months") {
@@ -523,8 +463,8 @@ class DateTimeUtilsSuite extends SparkFunSuite with Matchers with SQLHelper {
       assert(toJavaTimestamp(fromUTCTime(fromJavaTimestamp(Timestamp.valueOf(utc)), tz)).toString
         === expected)
     }
-    for (tz <- DateTimeTestUtils.ALL_TIMEZONES) {
-      DateTimeTestUtils.withDefaultTimeZone(tz) {
+    for (tz <- ALL_TIMEZONES) {
+      withDefaultTimeZone(tz) {
         test("2011-12-25 09:00:00.123456", "UTC", "2011-12-25 09:00:00.123456")
         test("2011-12-25 09:00:00.123456", JST.getId, "2011-12-25 18:00:00.123456")
         test("2011-12-25 09:00:00.123456", LA.getId, "2011-12-25 01:00:00.123456")

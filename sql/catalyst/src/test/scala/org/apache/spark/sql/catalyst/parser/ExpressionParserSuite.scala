@@ -17,6 +17,8 @@
 package org.apache.spark.sql.catalyst.parser
 
 import java.sql.{Date, Timestamp}
+import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 
 import scala.language.implicitConversions
 
@@ -56,6 +58,13 @@ class ExpressionParserSuite extends AnalysisTest {
 
   private def intercept(sqlCommand: String, messages: String*): Unit =
     interceptParseException(defaultParser.parseExpression)(sqlCommand, messages: _*)
+
+  def assertEval(
+      sqlCommand: String,
+      expect: Any,
+      parser: ParserInterface = defaultParser): Unit = {
+    assert(parser.parseExpression(sqlCommand).eval() === expect)
+  }
 
   test("star expressions") {
     // Global Star

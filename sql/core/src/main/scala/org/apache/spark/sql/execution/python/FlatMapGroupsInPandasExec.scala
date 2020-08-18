@@ -106,5 +106,4 @@ case class FlatMapGroupsInPandasExec(
 //        flattenedBatch.rowIterator.asScala
 //      }.map(unsafeProj)
     }
-  }
 }

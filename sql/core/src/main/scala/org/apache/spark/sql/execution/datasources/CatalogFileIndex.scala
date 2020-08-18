@@ -52,32 +52,6 @@ trait CatalogFileIndexFactory {
     tableSize: Long): CatalogFileIndex
 
 }
-  def filterPartitions(filters: Seq[Expression]): InMemoryFileIndex = {
-    if (table.partitionColumnNames.nonEmpty) {
-      val startTime = System.nanoTime()
-      val selectedPartitions = sparkSession.sessionState.catalog.listPartitionsByFilter(
-        table.identifier, filters)
-      val partitions = selectedPartitions.map { p =>
-        val path = new Path(p.location)
-        val fs = path.getFileSystem(hadoopConf)
-        PartitionPath(
-          p.toRow(partitionSchema, sparkSession.sessionState.conf.sessionLocalTimeZone),
-          path.makeQualified(fs.getUri, fs.getWorkingDirectory))
-      }
-      val partitionSpec = PartitionSpec(partitionSchema, partitions)
-      val timeNs = System.nanoTime() - startTime
-      new InMemoryFileIndex(sparkSession,
-        rootPathsSpecified = partitionSpec.partitions.map(_.path),
-        parameters = Map.empty,
-        userSpecifiedSchema = Some(partitionSpec.partitionColumns),
-        fileStatusCache = fileStatusCache,
-        userSpecifiedPartitionSpec = Some(partitionSpec),
-        metadataOpsTimeNs = Some(timeNs))
-    } else {
-      new InMemoryFileIndex(sparkSession, rootPaths, parameters = table.storage.properties,
-        userSpecifiedSchema = None, fileStatusCache = fileStatusCache)
-    }
-  }
 
 object CatalogFileIndexFactory {
 
