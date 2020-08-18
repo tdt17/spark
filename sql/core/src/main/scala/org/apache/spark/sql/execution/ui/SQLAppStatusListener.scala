@@ -352,27 +352,6 @@ class SQLAppStatusListener(
     update(exec)
   }
 
-  private def onAdaptiveExecutionUpdate(event: SparkListenerSQLAdaptiveExecutionUpdate): Unit = {
-    val SparkListenerSQLAdaptiveExecutionUpdate(
-      executionId, physicalPlanDescription, sparkPlanInfo) = event
-
-    val planGraph = SparkPlanGraph(sparkPlanInfo)
-    val sqlPlanMetrics = planGraph.allNodes.flatMap { node =>
-      node.metrics.map { metric => (metric.accumulatorId, metric) }
-    }.toMap.values.toList
-
-    val graphToStore = new SparkPlanGraphWrapper(
-      executionId,
-      toStoredNodes(planGraph.nodes),
-      planGraph.edges)
-    kvstore.write(graphToStore)
-
-    val exec = getOrCreateExecution(executionId)
-    exec.physicalPlanDescription = physicalPlanDescription
-    exec.metrics = sqlPlanMetrics
-    update(exec)
-  }
-
   private def onExecutionEnd(event: SparkListenerSQLExecutionEnd): Unit = {
     val SparkListenerSQLExecutionEnd(executionId, time) = event
     Option(liveExecutions.get(executionId)).foreach { exec =>

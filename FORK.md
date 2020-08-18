@@ -7,6 +7,7 @@
 * [SPARK-24345](https://issues.apache.org/jira/browse/SPARK-24345) - Improve ParseError stop location when offending symbol is a token
 * [SPARK-23795](https://issues.apache.org/jira/browse/SPARK-23795) - Make AbstractLauncher#self() protected
 * [SPARK-18079](https://issues.apache.org/jira/browse/SPARK-18079) - CollectLimitExec.executeToIterator should perform per-partition limits
+* [SPARK-17059](https://github.com/palantir/spark/pull/62/files) - Not merged upstream
 
 * [SPARK-15777](https://issues.apache.org/jira/browse/SPARK-15777) (Partial fix) - Catalog federation
     * make ExternalCatalog configurable beyond in memory and hive

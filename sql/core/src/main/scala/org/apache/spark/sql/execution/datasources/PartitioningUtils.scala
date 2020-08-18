@@ -32,8 +32,8 @@ import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.{Resolver, TypeCoercion}
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
-import org.apache.spark.sql.catalyst.expressions.{Attribute, Cast, Literal}
-import org.apache.spark.sql.catalyst.util.{CaseInsensitiveMap, DateTimeUtils}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Cast, Literal}
+import org.apache.spark.sql.catalyst.util.{CaseInsensitiveMap, DateFormatter, DateTimeUtils, TimestampFormatter}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.SchemaUtils
 
@@ -59,6 +59,8 @@ object PartitionSpec {
 }
 
 object PartitioningUtils {
+
+  val timestampPartitionPattern = "yyyy-MM-dd HH:mm:ss[.S]"
 
   private[datasources] case class PartitionValues(columnNames: Seq[String], literals: Seq[Literal])
   {
@@ -486,7 +488,7 @@ object PartitioningUtils {
     val dateTry = Try {
       // try and parse the date, if no exception occurs this is a candidate to be resolved as
       // DateType
-      DateTimeUtils.getThreadLocalDateFormat(DateTimeUtils.defaultTimeZone()).parse(raw)
+      dateFormatter.parse(raw)
       // SPARK-23436: Casting the string to date may still return null if a bad Date is provided.
       // This can happen since DateFormat.parse  may not use the entire text of the given string:
       // so if there are extra-characters after the date, it returns correctly.
@@ -503,7 +505,7 @@ object PartitioningUtils {
       val unescapedRaw = unescapePathName(raw)
       // try and parse the date, if no exception occurs this is a candidate to be resolved as
       // TimestampType
-      DateTimeUtils.getThreadLocalTimestampFormat(timeZone).parse(unescapedRaw)
+      timestampFormatter.parse(unescapedRaw)
       // SPARK-23436: see comment for date
       val timestampValue = Cast(Literal(unescapedRaw), TimestampType, Some(zoneId.getId)).eval()
       // Disallow TimestampType if the cast returned null

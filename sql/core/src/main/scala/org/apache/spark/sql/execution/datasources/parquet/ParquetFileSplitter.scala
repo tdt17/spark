@@ -61,6 +61,7 @@ class ParquetMetadataFileSplitter(
 
   private val sqlConf = session.sessionState.conf
   val parquetFilters = new ParquetFilters(
+    parquetSchema,
     sqlConf.parquetFilterPushDownDate,
     sqlConf.parquetFilterPushDownTimestamp,
     sqlConf.parquetFilterPushDownDecimal,
@@ -111,7 +112,7 @@ class ParquetMetadataFileSplitter(
   private def applyParquetFilter(
       filters: Seq[Filter],
       blocks: Seq[BlockMetaData]): Seq[BlockMetaData] = {
-    val predicates = filters.flatMap(parquetFilters.createFilter(parquetSchema, _))
+    val predicates = filters.flatMap(parquetFilters.createFilter)
     if (predicates.nonEmpty) {
       // Asynchronously build bitmaps
       Future {
@@ -132,7 +133,7 @@ class ParquetMetadataFileSplitter(
         .filter(filterSets.getIfPresent(_) == null)
         .flatMap { filter =>
           val bitmap = new RoaringBitmap
-          parquetFilters.createFilter(parquetSchema, filter).map((filter, _, bitmap))
+          parquetFilters.createFilter(filter).map((filter, _, bitmap))
         }
       var i = 0
       val blockLen = blocks.size

@@ -669,31 +669,30 @@ private[parquet] case class SetInFilter[T <: Comparable[T]](valueSet: Set[T])
  * down filters with nested fields.
  */
 private[parquet] object ParquetColumns {
-  def intColumn(columnPath: String): Column[Integer] with SupportsLtGt = {
-    new Column[Integer] (ColumnPath.get(columnPath), classOf[Integer]) with SupportsLtGt
+  def binaryColumn(columnPath: Array[String]): Column[Binary] with SupportsLtGt = {
+    new Column[Binary] (ColumnPath.get(columnPath: _*), classOf[Binary]) with SupportsLtGt
+  }
+  def intColumn(columnPath: Array[String]): Column[Integer] with SupportsLtGt = {
+    new Column[Integer] (ColumnPath.get(columnPath: _*), classOf[Integer]) with SupportsLtGt
   }
 
-  def longColumn(columnPath: String): Column[java.lang.Long] with SupportsLtGt = {
+  def longColumn(columnPath: Array[String]): Column[java.lang.Long] with SupportsLtGt = {
     new Column[java.lang.Long] (
-      ColumnPath.get(columnPath), classOf[java.lang.Long]) with SupportsLtGt
+      ColumnPath.get(columnPath: _*), classOf[java.lang.Long]) with SupportsLtGt
   }
 
-  def floatColumn(columnPath: String): Column[java.lang.Float] with SupportsLtGt = {
+  def floatColumn(columnPath: Array[String]): Column[java.lang.Float] with SupportsLtGt = {
     new Column[java.lang.Float] (
-      ColumnPath.get(columnPath), classOf[java.lang.Float]) with SupportsLtGt
+      ColumnPath.get(columnPath: _*), classOf[java.lang.Float]) with SupportsLtGt
   }
 
-  def doubleColumn(columnPath: String): Column[java.lang.Double] with SupportsLtGt = {
+  def doubleColumn(columnPath: Array[String]): Column[java.lang.Double] with SupportsLtGt = {
     new Column[java.lang.Double] (
-      ColumnPath.get(columnPath), classOf[java.lang.Double]) with SupportsLtGt
+      ColumnPath.get(columnPath: _*), classOf[java.lang.Double]) with SupportsLtGt
   }
 
-  def booleanColumn(columnPath: String): Column[java.lang.Boolean] with SupportsEqNotEq = {
+  def booleanColumn(columnPath: Array[String]): Column[java.lang.Boolean] with SupportsEqNotEq = {
     new Column[java.lang.Boolean] (
-      ColumnPath.get(columnPath), classOf[java.lang.Boolean]) with SupportsEqNotEq
-  }
-
-  def binaryColumn(columnPath: String): Column[Binary] with SupportsLtGt = {
-    new Column[Binary] (ColumnPath.get(columnPath), classOf[Binary]) with SupportsLtGt
+      ColumnPath.get(columnPath: _*), classOf[java.lang.Boolean]) with SupportsEqNotEq
   }
 }
