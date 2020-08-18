@@ -17,12 +17,12 @@
 package org.apache.spark.scheduler.cluster.k8s
 
 import com.google.common.cache.Cache
-import com.palantir.logsafe.SafeArg
+import com.palantir.logsafe.{SafeArg, UnsafeArg}
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.client.KubernetesClient
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-
 import org.apache.spark.SparkConf
 import org.apache.spark.deploy.k8s.Config._
 import org.apache.spark.deploy.k8s.KubernetesUtils._

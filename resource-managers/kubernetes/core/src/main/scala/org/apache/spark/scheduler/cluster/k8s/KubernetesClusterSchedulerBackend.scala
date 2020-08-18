@@ -152,8 +152,10 @@ private[spark] class KubernetesClusterSchedulerBackend(
           .withLabelIn(SPARK_EXECUTOR_ID_LABEL, executorIds: _*)
 
         if (!running.list().getItems().isEmpty()) {
-          logInfo(s"Forcefully deleting ${running.list().getItems().size()} pods " +
-            s"(out of ${executorIds.size}) that are still running after graceful shutdown period.")
+          safeLogInfo(s"Forcefully deleting ${running.list().getItems().size()} pods " +
+            "that are still running after graceful shutdown period.",
+            SafeArg.of("numPodsDeleted", running.list().getItems().size()),
+            SafeArg.of("totalNumPodsBeforeDeletion", executorIds.size))
           running.delete()
         }
       }

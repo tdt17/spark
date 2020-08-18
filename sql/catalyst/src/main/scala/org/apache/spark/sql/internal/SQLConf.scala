@@ -1212,12 +1212,6 @@ object SQLConf {
     .booleanConf
     .createWithDefault(true)
 
-  val SUBQUERY_REUSE_ENABLED = buildConf("spark.sql.subquery.reuse")
-    .internal()
-    .doc("When true, the planner will try to find out duplicated subqueries and re-use them.")
-    .booleanConf
-    .createWithDefault(true)
-
   val STATE_STORE_PROVIDER_CLASS =
     buildConf("spark.sql.streaming.stateStore.providerClass")
       .internal()
@@ -2338,6 +2332,15 @@ object SQLConf {
       "value for 'spark.sql.maxPlanStringLength'.  Length must be a valid string length " +
       "(nonnegative and shorter than the maximum size).")
     .createWithDefaultString(s"${ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH}")
+
+  val MAX_REPEATED_ALIAS_SIZE =
+    buildConf("spark.sql.maxRepeatedAliasSize")
+      .internal()
+      .doc("The maximum size of alias expression that will be substituted multiple times " +
+        "(size defined by the number of nodes in the expression tree). " +
+        "Used by the CollapseProject optimizer, and PhysicalOperation.")
+      .intConf
+      .createWithDefault(100)
 
   val SET_COMMAND_REJECTS_SPARK_CORE_CONFS =
     buildConf("spark.sql.legacy.setCommandRejectsSparkCoreConfs")

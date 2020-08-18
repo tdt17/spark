@@ -125,19 +125,6 @@ object PhysicalOperation extends OperationHelper with PredicateHelper {
         expression.treeSize > SQLConf.get.maxRepeatedAliasSize
     })
   }
-
-  private def substitute(aliases: Map[Attribute, Expression])(expr: Expression): Expression = {
-    expr.transform {
-      case a @ Alias(ref: AttributeReference, name) =>
-        aliases.get(ref)
-          .map(Alias(_, name)(a.exprId, a.qualifier))
-          .getOrElse(a)
-
-      case a: AttributeReference =>
-        aliases.get(a)
-          .map(Alias(_, a.name)(a.exprId, a.qualifier)).getOrElse(a)
-    }
-  }
 }
 
 /**

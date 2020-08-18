@@ -18,8 +18,6 @@
 package org.apache.spark.sql.catalyst.expressions
 
 import java.sql.Timestamp
-import java.text.DateFormat
-import java.util.{Calendar, TimeZone}
 import java.time.{DateTimeException, LocalDate, LocalDateTime, ZoneId}
 import java.time.temporal.IsoFields
 import java.util.Locale
@@ -33,7 +31,6 @@ import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
-import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, LegacyDateFormats, TimestampFormatter}
 import org.apache.spark.sql.catalyst.util.DateTimeConstants._
 import org.apache.spark.sql.catalyst.util.DateTimeUtils._
@@ -531,20 +528,14 @@ case class DayOfMonth(child: Expression) extends UnaryExpression with ImplicitCa
 case class DayOfWeek(child: Expression) extends DayWeek {
 
   override protected def nullSafeEval(date: Any): Any = {
-    cal.setTimeInMillis(date.asInstanceOf[Int] * 1000L * 3600L * 24L)
-    cal.get(Calendar.DAY_OF_WEEK)
+    val localDate = LocalDate.ofEpochDay(date.asInstanceOf[Int])
+    localDate.getDayOfWeek.plus(1).getValue
   }
 
   override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    nullSafeCodeGen(ctx, ev, time => {
-      val cal = classOf[Calendar].getName
-      val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
-      val c = "calDayOfWeek"
-      ctx.addImmutableStateIfNotExists(cal, c,
-        v => s"""$v = $cal.getInstance($dtu.getTimeZone("UTC"));""")
+    nullSafeCodeGen(ctx, ev, days => {
       s"""
-        $c.setTimeInMillis($time * 1000L * 3600L * 24L);
-        ${ev.value} = $c.get($cal.DAY_OF_WEEK);
+        ${ev.value} = java.time.LocalDate.ofEpochDay($days).getDayOfWeek().plus(1).getValue();
       """
     })
   }
@@ -564,20 +555,14 @@ case class DayOfWeek(child: Expression) extends DayWeek {
 case class WeekDay(child: Expression) extends DayWeek {
 
   override protected def nullSafeEval(date: Any): Any = {
-    cal.setTimeInMillis(date.asInstanceOf[Int] * 1000L * 3600L * 24L)
-    (cal.get(Calendar.DAY_OF_WEEK) + 5 ) % 7
+    val localDate = LocalDate.ofEpochDay(date.asInstanceOf[Int])
+    localDate.getDayOfWeek.ordinal()
   }
 
   override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    nullSafeCodeGen(ctx, ev, time => {
-      val cal = classOf[Calendar].getName
-      val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
-      val c = "calWeekDay"
-      ctx.addImmutableStateIfNotExists(cal, c,
-        v => s"""$v = $cal.getInstance($dtu.getTimeZone("UTC"));""")
+    nullSafeCodeGen(ctx, ev, days => {
       s"""
-        $c.setTimeInMillis($time * 1000L * 3600L * 24L);
-        ${ev.value} = ($c.get($cal.DAY_OF_WEEK) + 5) % 7;
+         ${ev.value} = java.time.LocalDate.ofEpochDay($days).getDayOfWeek().ordinal();
       """
     })
   }
@@ -588,10 +573,6 @@ abstract class DayWeek extends UnaryExpression with ImplicitCastInputTypes {
   override def inputTypes: Seq[AbstractDataType] = Seq(DateType)
 
   override def dataType: DataType = IntegerType
-
-  @transient protected lazy val cal: Calendar = {
-    Calendar.getInstance(DateTimeUtils.getTimeZone("UTC"))
-  }
 }
 
 // scalastyle:off line.size.limit
@@ -611,32 +592,16 @@ case class WeekOfYear(child: Expression) extends UnaryExpression with ImplicitCa
 
   override def dataType: DataType = IntegerType
 
-  @transient private lazy val c = {
-    val c = Calendar.getInstance(DateTimeUtils.getTimeZone("UTC"))
-    c.setFirstDayOfWeek(Calendar.MONDAY)
-    c.setMinimalDaysInFirstWeek(4)
-    c
-  }
-
   override protected def nullSafeEval(date: Any): Any = {
-    c.setTimeInMillis(date.asInstanceOf[Int] * 1000L * 3600L * 24L)
-    c.get(Calendar.WEEK_OF_YEAR)
+    val localDate = LocalDate.ofEpochDay(date.asInstanceOf[Int])
+    localDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
   }
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    nullSafeCodeGen(ctx, ev, time => {
-      val cal = classOf[Calendar].getName
-      val c = "calWeekOfYear"
-      val dtu = DateTimeUtils.getClass.getName.stripSuffix("$")
-      ctx.addImmutableStateIfNotExists(cal, c, v =>
-        s"""
-           |$v = $cal.getInstance($dtu.getTimeZone("UTC"));
-           |$v.setFirstDayOfWeek($cal.MONDAY);
-           |$v.setMinimalDaysInFirstWeek(4);
-         """.stripMargin)
+    nullSafeCodeGen(ctx, ev, days => {
       s"""
-         |$c.setTimeInMillis($time * 1000L * 3600L * 24L);
-         |${ev.value} = $c.get($cal.WEEK_OF_YEAR);
+         |${ev.value} = java.time.LocalDate.ofEpochDay($days).get(
+         |  java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
        """.stripMargin
     })
   }
@@ -828,7 +793,7 @@ abstract class ToTimestamp
   override def nullable: Boolean = true
 
   private lazy val constFormat: UTF8String = right.eval().asInstanceOf[UTF8String]
-  private lazy val formatter: DateFormat =
+  private lazy val formatter: TimestampFormatter =
     try {
       TimestampFormatter(
         constFormat.toString,
@@ -888,7 +853,7 @@ abstract class ToTimestamp
     val javaType = CodeGenerator.javaType(dataType)
     left.dataType match {
       case StringType if right.foldable =>
-        val df = classOf[DateFormat].getName
+        val df = classOf[TimestampFormatter].getName
         if (formatter == null) {
           ExprCode.forNullValue(dataType)
         } else {
@@ -904,6 +869,10 @@ abstract class ToTimestamp
               } catch (java.lang.IllegalArgumentException e) {
                 ${ev.isNull} = true;
               } catch (java.text.ParseException e) {
+                ${ev.isNull} = true;
+              } catch (java.time.format.DateTimeParseException e) {
+                ${ev.isNull} = true;
+              } catch (java.time.DateTimeException e) {
                 ${ev.isNull} = true;
               }
             }""")
@@ -924,6 +893,10 @@ abstract class ToTimestamp
             } catch (java.lang.IllegalArgumentException e) {
               ${ev.isNull} = true;
             } catch (java.text.ParseException e) {
+              ${ev.isNull} = true;
+            } catch (java.time.format.DateTimeParseException e) {
+              ${ev.isNull} = true;
+            } catch (java.time.DateTimeException e) {
               ${ev.isNull} = true;
             }
           """
@@ -1002,7 +975,7 @@ case class FromUnixTime(sec: Expression, format: Expression, timeZoneId: Option[
     copy(timeZoneId = Option(timeZoneId))
 
   private lazy val constFormat: UTF8String = right.eval().asInstanceOf[UTF8String]
-  private lazy val formatter: DateFormat =
+  private lazy val formatter: TimestampFormatter =
     try {
       TimestampFormatter(
         constFormat.toString,
@@ -1024,8 +997,7 @@ case class FromUnixTime(sec: Expression, format: Expression, timeZoneId: Option[
           null
         } else {
           try {
-            UTF8String.fromString(formatter.format(
-              new java.util.Date(time.asInstanceOf[Long] * 1000L)))
+            UTF8String.fromString(formatter.format(time.asInstanceOf[Long] * MICROS_PER_SECOND))
           } catch {
             case e: SparkUpgradeException => throw e
             case NonFatal(_) => null
@@ -1054,7 +1026,7 @@ case class FromUnixTime(sec: Expression, format: Expression, timeZoneId: Option[
   }
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    val df = classOf[DateFormat].getName
+    val df = classOf[TimestampFormatter].getName
     if (format.foldable) {
       if (formatter == null) {
         ExprCode.forNullValue(StringType)
@@ -1067,8 +1039,7 @@ case class FromUnixTime(sec: Expression, format: Expression, timeZoneId: Option[
           ${CodeGenerator.javaType(dataType)} ${ev.value} = ${CodeGenerator.defaultValue(dataType)};
           if (!${ev.isNull}) {
             try {
-              ${ev.value} = UTF8String.fromString($formatterName.format(
-                new java.util.Date(${t.value} * 1000L)));
+              ${ev.value} = UTF8String.fromString($formatterName.format(${t.value} * 1000000L));
             } catch (java.lang.IllegalArgumentException e) {
               ${ev.isNull} = true;
             }

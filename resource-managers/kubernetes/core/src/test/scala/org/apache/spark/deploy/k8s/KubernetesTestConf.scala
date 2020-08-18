@@ -44,6 +44,7 @@ object KubernetesTestConf {
       mainAppResource: MainAppResource = JavaMainAppResource(None),
       mainClass: String = MAIN_CLASS,
       appArgs: Array[String] = Array.empty,
+      pyFiles: Seq[String] = Nil,
       resourceNamePrefix: Option[String] = None,
       labels: Map[String, String] = Map.empty,
       environment: Map[String, String] = Map.empty,
@@ -65,7 +66,7 @@ object KubernetesTestConf {
     setPrefixedConfigs(conf, KUBERNETES_DRIVER_SECRET_KEY_REF_PREFIX, secretEnvNamesToKeyRefs)
     setVolumeSpecs(conf, KUBERNETES_DRIVER_VOLUMES_PREFIX, volumes)
 
-    new KubernetesDriverConf(conf, appId, mainAppResource, mainClass, appArgs)
+    new KubernetesDriverConf(conf, appId, mainAppResource, mainClass, appArgs, pyFiles)
   }
   // scalastyle:on argcount
 

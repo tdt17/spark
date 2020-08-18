@@ -74,7 +74,8 @@ private[spark] class KubernetesDriverConf(
     val appId: String,
     val mainAppResource: MainAppResource,
     val mainClass: String,
-    val appArgs: Array[String])
+    val appArgs: Array[String],
+    val pyFiles: Seq[String])
   extends KubernetesConf(sparkConf) {
 
   override val resourceNamePrefix: String = {
@@ -195,11 +196,14 @@ private[spark] object KubernetesConf {
       appId: String,
       mainAppResource: MainAppResource,
       mainClass: String,
-      appArgs: Array[String]): KubernetesDriverConf = {
+      appArgs: Array[String],
+      maybePyFiles: Option[String]): KubernetesDriverConf = {
     // Parse executor volumes in order to verify configuration before the driver pod is created.
     KubernetesVolumeUtils.parseVolumesWithPrefix(sparkConf, KUBERNETES_EXECUTOR_VOLUMES_PREFIX)
 
-    new KubernetesDriverConf(sparkConf.clone(), appId, mainAppResource, mainClass, appArgs)
+    val pyFiles = maybePyFiles.map(Utils.stringToSeq).getOrElse(Nil)
+    new KubernetesDriverConf(sparkConf.clone(), appId, mainAppResource, mainClass, appArgs,
+      pyFiles)
   }
 
   def createExecutorConf(
