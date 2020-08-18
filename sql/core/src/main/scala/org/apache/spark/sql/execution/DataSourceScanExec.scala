@@ -525,7 +525,7 @@ case class FileSourceScanExec(
     val format = fsRelation.fileFormat
     val splitter =
       format.buildSplitter(session, fsRelation.location,
-        dataFilters.flatMap(DataSourceStrategy.translateFilter), schema,
+        dataFilters.flatMap(DataSourceStrategy.translateFilter(_, true)), schema,
         session.sessionState.newHadoopConf())
     val filesGroupedToBuckets =
       selectedPartitions.flatMap { p =>
@@ -575,7 +575,7 @@ case class FileSourceScanExec(
       s"open cost is considered as scanning $openCostInBytes bytes.")
     val splitter =
       format.buildSplitter(session, fsRelation.location,
-        dataFilters.flatMap(DataSourceStrategy.translateFilter), schema,
+        dataFilters.flatMap(DataSourceStrategy.translateFilter(_, true)), schema,
         session.sessionState.newHadoopConf())
 
     val splitFiles = selectedPartitions.flatMap { partition =>

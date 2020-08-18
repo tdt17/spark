@@ -32,6 +32,7 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.{DataType, DateType, NumericType, StructType, TimestampType}
+import org.apache.spark.unsafe.types.UTF8String
 
 /**
  * Instructions on how to partition the table among workers.
@@ -86,8 +87,8 @@ private[sql] object JDBCRelation extends Logging {
         val (column, columnType) = verifyAndGetNormalizedPartitionColumn(
           schema, partitionColumn.get, resolver, jdbcOptions)
 
-        val lowerBoundValue = toInternalBoundValue(lowerBound.get, columnType)
-        val upperBoundValue = toInternalBoundValue(upperBound.get, columnType)
+        val lowerBoundValue = toInternalBoundValue(lowerBound.get, columnType, timeZoneId)
+        val upperBoundValue = toInternalBoundValue(upperBound.get, columnType, timeZoneId)
         JDBCPartitioningInfo(
           column, columnType, lowerBoundValue, upperBoundValue, numPartitions.get)
       }
@@ -197,7 +198,6 @@ private[sql] object JDBCRelation extends Logging {
       columnType: DataType,
       timeZoneId: String): String = {
     def dateTimeToString(): String = {
-      val timeZone = DateTimeUtils.getTimeZone(timeZoneId)
       val dateTimeStr = columnType match {
         case DateType =>
           val dateFormatter = DateFormatter(DateTimeUtils.getZoneId(timeZoneId))
