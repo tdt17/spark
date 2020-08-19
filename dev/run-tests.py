@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
@@ -115,9 +115,6 @@ def determine_modules_to_test(changed_modules):
     >>> [x.name for x in determine_modules_to_test([modules.graphx])]
     ['graphx', 'examples']
     >>> x = [x.name for x in determine_modules_to_test([modules.sql])]
-    >>> x # doctest: +NORMALIZE_WHITESPACE
-    ['sql', 'avro', 'hive', 'mllib', 'sql-kafka-0-10', 'examples', 'hive-thriftserver',
-     'pyspark-sql', 'repl', 'sparkr', 'pyspark-mllib', 'pyspark-ml']
     """
     modules_to_test = set()
     for module in changed_modules:
@@ -263,24 +260,18 @@ def exec_sbt(sbt_args=()):
     # with failure (either resolution or compilation) prompts the user for
     # input either q, r, etc to quit or retry. This echo is there to make it
     # not block.
-    echo_proc = subprocess.Popen(["echo", "q\n"], stdout=subprocess.PIPE)
+    echo_proc = subprocess.Popen(["echo", "\"q\n\""], stdout=subprocess.PIPE)
     sbt_proc = subprocess.Popen(sbt_cmd,
                                 stdin=echo_proc.stdout,
                                 stdout=subprocess.PIPE)
     echo_proc.wait()
-    lines = iter(sbt_proc.stdout.readline, b'')
-    if sys.version_info > (3,):
-        write_bytes = sys.stdout.buffer.write
-    else:
-        write_bytes = lambda bytes: print(bytes, end='')
-    for line in lines:
+    for line in iter(sbt_proc.stdout.readline, b''):
         if not sbt_output_filter.match(line):
             print(line.decode('utf-8'), end='')
     retcode = sbt_proc.wait()
 
     if retcode != 0:
         exit_from_command_with_retcode(sbt_cmd, retcode)
-    return sbt_cmd, retcode
 
 
 def get_hadoop_profiles(hadoop_version):
@@ -292,7 +283,6 @@ def get_hadoop_profiles(hadoop_version):
     sbt_maven_hadoop_profiles = {
         "hadoop2.7": ["-Phadoop-2.7"],
         "hadoop3.2": ["-Phadoop-3.2"],
-        "hadooppalantir": ["-Phadoop-palantir"],
     }
 
     if hadoop_version in sbt_maven_hadoop_profiles:
@@ -408,14 +398,8 @@ def run_scala_tests_maven(test_profiles):
 
 
 def run_scala_tests_sbt(test_modules, test_profiles):
-    if 'CIRCLE_TEST_REPORTS' in os.environ:
-        # The test task in the circle configuration runs only the appropriate test for the current
-        # circle node, then copies the results to CIRCLE_TEST_REPORTS.
-        # We are not worried about running only the `test_modules`, since we always run the whole
-        # suite in circle anyway.
-        sbt_test_goals = ['circle:test']
-    else:
-        sbt_test_goals = list(itertools.chain.from_iterable(m.sbt_test_goals for m in test_modules))
+
+    sbt_test_goals = list(itertools.chain.from_iterable(m.sbt_test_goals for m in test_modules))
 
     if not sbt_test_goals:
         return
@@ -425,7 +409,7 @@ def run_scala_tests_sbt(test_modules, test_profiles):
     print("[info] Running Spark tests using SBT with these arguments: ",
           " ".join(profiles_and_goals))
 
-    sbt_cmd, retcode = exec_sbt(profiles_and_goals)
+    exec_sbt(profiles_and_goals)
 
 
 def run_scala_tests(build_tool, extra_profiles, test_modules, excluded_tags):
@@ -454,7 +438,7 @@ def run_scala_tests(build_tool, extra_profiles, test_modules, excluded_tags):
         run_scala_tests_sbt(test_modules, test_profiles)
 
 
-def run_python_tests(test_modules, parallelism, python_executables=None, with_coverage=False):
+def run_python_tests(test_modules, parallelism, with_coverage=False):
     set_title_and_block("Running PySpark tests", "BLOCK_PYSPARK_UNIT_TESTS")
 
     if with_coverage:
@@ -468,10 +452,7 @@ def run_python_tests(test_modules, parallelism, python_executables=None, with_co
     command = [os.path.join(SPARK_HOME, "python", script)]
     if test_modules != [modules.root]:
         command.append("--modules=%s" % ','.join(m.name for m in test_modules))
-    if python_executables is not None:
-        command.append("--python-executables={}".format(",".join(python_executables)))
     command.append("--parallelism=%i" % parallelism)
-    command.append("--verbose")
     run_cmd(command)
 
     if with_coverage:
@@ -520,14 +501,9 @@ def post_python_tests_results():
         shutil.rmtree("pyspark-coverage-site")
 
 
-def run_python_packaging_tests(use_conda, python_versions=None):
+def run_python_packaging_tests():
     set_title_and_block("Running PySpark packaging tests", "BLOCK_PYSPARK_PIP_TESTS")
     command = [os.path.join(SPARK_HOME, "dev", "run-pip-tests")]
-    env = dict(os.environ)
-    if python_versions is not None:
-        env["PYTHON_EXECS_IN"] = ";".join(python_versions)
-        if use_conda:
-            env["USE_CONDA"] = "1"
     run_cmd(command)
 
 
@@ -688,13 +664,12 @@ def main():
 
     modules_with_python_tests = [m for m in test_modules if m.python_test_goals]
     if modules_with_python_tests:
-        print("[info] skipping python tests... palantir/spark")
         # We only run PySpark tests with coverage report in one specific job with
         # Spark master with SBT in Jenkins.
-        # is_sbt_master_job = "SPARK_MASTER_SBT_HADOOP_2_7" in os.environ
-        # run_python_tests(
-        #     modules_with_python_tests, opts.parallelism, with_coverage=is_sbt_master_job)
-        # run_python_packaging_tests()
+        is_sbt_master_job = "SPARK_MASTER_SBT_HADOOP_2_7" in os.environ
+        run_python_tests(
+            modules_with_python_tests, opts.parallelism, with_coverage=is_sbt_master_job)
+        run_python_packaging_tests()
     if any(m.should_run_r_tests for m in test_modules):
         run_sparkr_tests()
 

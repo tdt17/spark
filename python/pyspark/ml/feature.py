@@ -45,8 +45,7 @@ __all__ = ['Binarizer',
            'MinMaxScaler', 'MinMaxScalerModel',
            'NGram',
            'Normalizer',
-           'OneHotEncoder',
-           'OneHotEncoderEstimator', 'OneHotEncoderModel',
+           'OneHotEncoder', 'OneHotEncoderModel',
            'PCA', 'PCAModel',
            'PolynomialExpansion',
            'QuantileDiscretizer',
@@ -1316,6 +1315,10 @@ class IDF(JavaEstimator, _IDFParams, JavaMLReadable, JavaMLWritable):
     3
     >>> model.idf
     DenseVector([0.0, 0.0])
+    >>> model.docFreq
+    [0, 3]
+    >>> model.numDocs == df.count()
+    True
     >>> model.transform(df).head().idf
     DenseVector([0.0, 0.0])
     >>> idf.setParams(outputCol="freqs").fit(df).transform(df).collect()[1].freqs
@@ -1409,6 +1412,22 @@ class IDFModel(JavaModel, _IDFParams, JavaMLReadable, JavaMLWritable):
         Returns the IDF vector.
         """
         return self._call_java("idf")
+
+    @property
+    @since("3.0.0")
+    def docFreq(self):
+        """
+        Returns the document frequency.
+        """
+        return self._call_java("docFreq")
+
+    @property
+    @since("3.0.0")
+    def numDocs(self):
+        """
+        Returns number of documents evaluated to compute idf
+        """
+        return self._call_java("numDocs")
 
 
 class _ImputerParams(HasInputCol, HasInputCols, HasOutputCol, HasOutputCols, HasRelativeError):
@@ -2361,22 +2380,22 @@ class OneHotEncoder(JavaEstimator, _OneHotEncoderParams, JavaMLReadable, JavaMLW
     at most a single one-value per row that indicates the input category index.
     For example with 5 categories, an input value of 2.0 would map to an output vector of
     `[0.0, 0.0, 1.0, 0.0]`.
-    The last category is not included by default (configurable via `dropLast`),
+    The last category is not included by default (configurable via :py:attr:`dropLast`),
     because it makes the vector entries sum up to one, and hence linearly dependent.
     So an input value of 4.0 maps to `[0.0, 0.0, 0.0, 0.0]`.
 
-    Note: This is different from scikit-learn's OneHotEncoder, which keeps all categories.
-    The output vectors are sparse.
+    .. note:: This is different from scikit-learn's OneHotEncoder, which keeps all categories.
+        The output vectors are sparse.
 
-    When `handleInvalid` is configured to 'keep', an extra "category" indicating invalid values is
-    added as last category. So when `dropLast` is true, invalid values are encoded as all-zeros
-    vector.
+    When :py:attr:`handleInvalid` is configured to 'keep', an extra "category" indicating invalid
+    values is added as last category. So when :py:attr:`dropLast` is true, invalid values are
+    encoded as all-zeros vector.
 
-    Note: When encoding multi-column by using `inputCols` and `outputCols` params, input/output
-    cols come in pairs, specified by the order in the arrays, and each pair is treated
-    independently.
+    .. note:: When encoding multi-column by using :py:attr:`inputCols` and
+        :py:attr:`outputCols` params, input/output cols come in pairs, specified by the order in
+        the arrays, and each pair is treated independently.
 
-    See `StringIndexer` for converting categorical values into category indices
+    .. seealso:: :py:class:`StringIndexer` for converting categorical values into category indices
 
     >>> from pyspark.ml.linalg import Vectors
     >>> df = spark.createDataFrame([(0.0,), (1.0,), (2.0,)], ["input"])
@@ -2398,7 +2417,7 @@ class OneHotEncoder(JavaEstimator, _OneHotEncoderParams, JavaMLReadable, JavaMLW
     SparseVector(2, {0: 1.0})
     >>> ohePath = temp_path + "/ohe"
     >>> ohe.save(ohePath)
-    >>> loadedOHE = OneHotEncoderEstimator.load(ohePath)
+    >>> loadedOHE = OneHotEncoder.load(ohePath)
     >>> loadedOHE.getInputCols() == ohe.getInputCols()
     True
     >>> modelPath = temp_path + "/ohe-model"
@@ -2417,9 +2436,9 @@ class OneHotEncoder(JavaEstimator, _OneHotEncoderParams, JavaMLReadable, JavaMLW
         __init__(self, inputCols=None, outputCols=None, handleInvalid="error", dropLast=True, \
                  inputCol=None, outputCol=None)
         """
-        super(OneHotEncoderEstimator, self).__init__()
+        super(OneHotEncoder, self).__init__()
         self._java_obj = self._new_java_obj(
-            "org.apache.spark.ml.feature.OneHotEncoderEstimator", self.uid)
+            "org.apache.spark.ml.feature.OneHotEncoder", self.uid)
         self._setDefault(handleInvalid="error", dropLast=True)
         kwargs = self._input_kwargs
         self.setParams(**kwargs)
@@ -2484,7 +2503,7 @@ class OneHotEncoder(JavaEstimator, _OneHotEncoderParams, JavaMLReadable, JavaMLW
 
 class OneHotEncoderModel(JavaModel, _OneHotEncoderParams, JavaMLReadable, JavaMLWritable):
     """
-    Model fitted by :py:class:`OneHotEncoderEstimator`.
+    Model fitted by :py:class:`OneHotEncoder`.
 
     .. versionadded:: 2.3.0
     """
