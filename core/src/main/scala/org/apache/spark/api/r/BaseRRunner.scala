@@ -310,7 +310,7 @@ private[r] object BaseRRunner {
       .getOrElse({
         val sparkRPackagePaths = RUtils.sparkRPackagePath(isDriver = false)
         if (preInstalledCondaPath.isDefined) {
-          sparkRPackagePaths :+ (preInstalledCondaPath.get + rLibPath)
+          sparkRPackagePaths :+ (preInstalledCondaPath.get.value + rLibPath)
         } else {
           sparkRPackagePaths
         }
