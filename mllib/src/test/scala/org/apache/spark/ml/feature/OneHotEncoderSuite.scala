@@ -19,29 +19,17 @@ package org.apache.spark.ml.feature
 
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.attribute.{AttributeGroup, BinaryAttribute, NominalAttribute}
-import org.apache.spark.ml.linalg.Vector
-import org.apache.spark.ml.linalg.Vectors
+import org.apache.spark.ml.linalg.{Vector, Vectors, VectorUDT}
 import org.apache.spark.ml.param.ParamsSuite
 import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTest}
-import org.apache.spark.sql.{DataFrame, Encoder, Row}
+import org.apache.spark.sql.{Encoder, Row}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types._
 
-class OneHotEncoderSuite
-  extends MLTest with DefaultReadWriteTest {
+class OneHotEncoderSuite extends MLTest with DefaultReadWriteTest {
 
   import testImplicits._
-
-  def stringIndexed(): DataFrame = {
-    val data = Seq((0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c"))
-    val df = data.toDF("id", "label")
-    val indexer = new StringIndexer()
-      .setInputCol("label")
-      .setOutputCol("labelIndex")
-      .fit(df)
-    indexer.transform(df)
-  }
 
   test("params") {
     ParamsSuite.checkParams(new OneHotEncoder)
@@ -160,7 +148,6 @@ class OneHotEncoderSuite
       assert(group.getAttr(1) === BinaryAttribute.defaultAttr.withName("medium").withIndex(1))
     }
   }
-
 
   test("input column without ML attribute") {
     val df = Seq(0.0, 1.0, 2.0, 1.0).map(Tuple1.apply).toDF("index")

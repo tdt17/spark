@@ -60,8 +60,6 @@ object FilterPushdownBenchmark extends SqlBasedBenchmark {
   // For Parquet/ORC, we will use the same value for block size and compression size
   private val blockSize = org.apache.parquet.hadoop.ParquetWriter.DEFAULT_PAGE_SIZE
 
-  private lazy val spark = SparkSession.builder().config(conf).getOrCreate()
-
   def withTempTable(tableNames: String*)(f: => Unit): Unit = {
     try f finally tableNames.foreach(spark.catalog.dropTempView)
   }

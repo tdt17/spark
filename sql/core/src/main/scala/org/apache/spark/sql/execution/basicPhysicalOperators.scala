@@ -792,9 +792,9 @@ case class SubqueryExec(name: String, child: SparkPlan)
 }
 
 object SubqueryExec {
+  private[spark] val THREADS = SQLConf.get.getConf(StaticSQLConf.SUBQUERY_MAX_THREAD_THRESHOLD)
   private[execution] val executionContext = ExecutionContext.fromExecutorService(
-    ThreadUtils.newDaemonCachedThreadPool("subquery",
-      SQLConf.get.getConf(StaticSQLConf.SUBQUERY_MAX_THREAD_THRESHOLD)))
+    ThreadUtils.newDaemonCachedThreadPool("subquery", THREADS))
 }
 
 /**

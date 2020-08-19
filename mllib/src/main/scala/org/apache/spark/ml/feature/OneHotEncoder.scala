@@ -17,8 +17,11 @@
 
 package org.apache.spark.ml.feature
 
+import org.apache.hadoop.fs.Path
+
+import org.apache.spark.SparkException
 import org.apache.spark.annotation.Since
-import org.apache.spark.ml.Transformer
+import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param._
@@ -106,38 +109,28 @@ private[ml] trait OneHotEncoderBase extends Params with HasHandleInvalid
  * at most a single one-value per row that indicates the input category index.
  * For example with 5 categories, an input value of 2.0 would map to an output vector of
  * `[0.0, 0.0, 1.0, 0.0]`.
- * The last category is not included by default (configurable via `OneHotEncoder!.dropLast`
+ * The last category is not included by default (configurable via `dropLast`),
  * because it makes the vector entries sum up to one, and hence linearly dependent.
  * So an input value of 4.0 maps to `[0.0, 0.0, 0.0, 0.0]`.
  *
  * @note This is different from scikit-learn's OneHotEncoder, which keeps all categories.
  * The output vectors are sparse.
  *
+ * When `handleInvalid` is configured to 'keep', an extra "category" indicating invalid values is
+ * added as last category. So when `dropLast` is true, invalid values are encoded as all-zeros
+ * vector.
+ *
+ * @note When encoding multi-column by using `inputCols` and `outputCols` params, input/output cols
+ * come in pairs, specified by the order in the arrays, and each pair is treated independently.
+ *
  * @see `StringIndexer` for converting categorical values into category indices
- * @deprecated `OneHotEncoderEstimator` will be renamed `OneHotEncoder` and this `OneHotEncoder`
- * will be removed in 3.0.0.
  */
-@Since("1.4.0")
-@deprecated("`OneHotEncoderEstimator` will be renamed `OneHotEncoder` and this `OneHotEncoder`" +
-  " will be removed in 3.0.0.", "2.3.0")
-class OneHotEncoder @Since("1.4.0") (@Since("1.4.0") override val uid: String) extends Transformer
-  with HasInputCol with HasOutputCol with DefaultParamsWritable {
+@Since("3.0.0")
+class OneHotEncoder @Since("3.0.0") (@Since("3.0.0") override val uid: String)
+    extends Estimator[OneHotEncoderModel] with OneHotEncoderBase with DefaultParamsWritable {
 
-  @Since("1.4.0")
-  def this() = this(Identifiable.randomUID("oneHot"))
-
-  /**
-   * Whether to drop the last category in the encoded vector (default: true)
-   * @group param
-   */
-  @Since("1.4.0")
-  final val dropLast: BooleanParam =
-    new BooleanParam(this, "dropLast", "whether to drop the last category")
-  setDefault(dropLast -> true)
-
-  /** @group getParam */
-  @Since("2.0.0")
-  def getDropLast: Boolean = $(dropLast)
+  @Since("3.0.0")
+  def this() = this(Identifiable.randomUID("oneHotEncoder"))
 
   /** @group setParam */
   @Since("3.0.0")
@@ -148,40 +141,31 @@ class OneHotEncoder @Since("1.4.0") (@Since("1.4.0") override val uid: String) e
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
   /** @group setParam */
-  @Since("1.4.0")
+  @Since("3.0.0")
+  def setInputCols(values: Array[String]): this.type = set(inputCols, values)
+
+  /** @group setParam */
+  @Since("3.0.0")
+  def setOutputCols(values: Array[String]): this.type = set(outputCols, values)
+
+  /** @group setParam */
+  @Since("3.0.0")
   def setDropLast(value: Boolean): this.type = set(dropLast, value)
 
   /** @group setParam */
-  @Since("1.4.0")
-  def setInputCol(value: String): this.type = set(inputCol, value)
+  @Since("3.0.0")
+  def setHandleInvalid(value: String): this.type = set(handleInvalid, value)
 
-  /** @group setParam */
-  @Since("1.4.0")
-  def setOutputCol(value: String): this.type = set(outputCol, value)
-
-  @Since("1.4.0")
+  @Since("3.0.0")
   override def transformSchema(schema: StructType): StructType = {
-    val inputColName = $(inputCol)
-    val outputColName = $(outputCol)
-    val inputFields = schema.fields
-
-    require(schema(inputColName).dataType.isInstanceOf[NumericType],
-      s"Input column must be of type ${NumericType.simpleString} but got " +
-        schema(inputColName).dataType.catalogString)
-    require(!inputFields.exists(_.name == outputColName),
-      s"Output column $outputColName already exists.")
-
-    val outputField = OneHotEncoderCommon.transformOutputColumnSchema(
-      schema(inputColName), outputColName, $(dropLast))
-    val outputFields = inputFields :+ outputField
-    StructType(outputFields)
+    val keepInvalid = $(handleInvalid) == OneHotEncoder.KEEP_INVALID
+    validateAndTransformSchema(schema, dropLast = $(dropLast),
+      keepInvalid = keepInvalid)
   }
 
-  @Since("2.0.0")
-  override def transform(dataset: Dataset[_]): DataFrame = {
-    // schema transformation
-    val inputColName = $(inputCol)
-    val outputColName = $(outputCol)
+  @Since("3.0.0")
+  override def fit(dataset: Dataset[_]): OneHotEncoderModel = {
+    transformSchema(dataset.schema)
 
     val (inputColumns, outputColumns) = getInOutCols()
     // Compute the plain number of categories without `handleInvalid` and
@@ -207,30 +191,31 @@ class OneHotEncoder @Since("1.4.0") (@Since("1.4.0") override val uid: String) e
       val inputColNames = columnToScanIndices.map(inputColumns(_))
       val outputColNames = columnToScanIndices.map(outputColumns(_))
 
-    // data transformation
-    val size = outputAttrGroup.size
-    val oneValue = Array(1.0)
-    val emptyValues = Array.empty[Double]
-    val emptyIndices = Array.empty[Int]
-    val encode = udf { label: Double =>
-      if (label < size) {
-        Vectors.sparse(size, Array(label.toInt), oneValue)
-      } else {
-        Vectors.sparse(size, emptyIndices, emptyValues)
+      // When fitting data, we want the plain number of categories without `handleInvalid` and
+      // `dropLast` taken into account.
+      val attrGroups = OneHotEncoderCommon.getOutputAttrGroupFromData(
+        dataset, inputColNames, outputColNames, dropLast = false)
+      attrGroups.zip(columnToScanIndices).foreach { case (attrGroup, idx) =>
+        categorySizes(idx) = attrGroup.size
       }
     }
 
-    dataset.select(col("*"), encode(col(inputColName).cast(DoubleType)).as(outputColName, metadata))
+    val model = new OneHotEncoderModel(uid, categorySizes).setParent(this)
+    copyValues(model)
   }
 
-  @Since("1.4.1")
+  @Since("3.0.0")
   override def copy(extra: ParamMap): OneHotEncoder = defaultCopy(extra)
 }
 
-@Since("1.6.0")
+@Since("3.0.0")
 object OneHotEncoder extends DefaultParamsReadable[OneHotEncoder] {
 
-  @Since("1.6.0")
+  private[feature] val KEEP_INVALID: String = "keep"
+  private[feature] val ERROR_INVALID: String = "error"
+  private[feature] val supportedHandleInvalids: Array[String] = Array(KEEP_INVALID, ERROR_INVALID)
+
+  @Since("3.0.0")
   override def load(path: String): OneHotEncoder = super.load(path)
 }
 

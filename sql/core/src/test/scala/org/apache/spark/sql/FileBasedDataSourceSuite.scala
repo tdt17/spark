@@ -621,7 +621,6 @@ class FileBasedDataSourceSuite extends QueryTest
 
     assert(fileList.toSet === expectedFileList.toSet)
   }
-}
 
   test("Do not use cache on overwrite") {
     Seq("", "orc").foreach { useV1SourceReaderList =>

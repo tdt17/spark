@@ -186,6 +186,7 @@ class ParquetInteroperabilitySuite extends ParquetCompatibilityTest with SharedS
                 assert(typeName === PrimitiveTypeName.INT96)
                 val oneBlockMeta = oneFooter.getBlocks().get(0)
                 val oneBlockColumnMeta = oneBlockMeta.getColumns().get(0)
+                val columnStats = oneBlockColumnMeta.getStatistics
                 // This is the important assert.  Column stats are written, but they are ignored
                 // when the data is read back as mentioned above, b/c int96 is unsigned.  This
                 // assert makes sure this holds even if we change parquet versions (if eg. there

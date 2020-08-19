@@ -23,7 +23,6 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.{expressions, InternalRow}
-import org.apache.spark.sql.catalyst.expressions.{AttributeSeq, Expression, ExprId, InSet, Literal, PlanExpression}
 import org.apache.spark.sql.catalyst.expressions.{AttributeSeq, CreateNamedStruct, Expression, ExprId, InSet, ListQuery, Literal, PlanExpression}
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
 import org.apache.spark.sql.catalyst.rules.Rule
@@ -41,12 +40,6 @@ abstract class ExecSubqueryExpression extends PlanExpression[BaseSubqueryExec] {
 
   /** Updates the expression with a new plan. */
   override def withNewPlan(plan: BaseSubqueryExec): ExecSubqueryExpression
-
-// TODO(@jcasale) SPARK-27393 was not in branch-3.0
-  override def canonicalize(attrs: AttributeSeq): ExecSubqueryExpression = {
-    withNewPlan(plan.canonicalized.asInstanceOf[BaseSubqueryExec])
-      .asInstanceOf[ExecSubqueryExpression]
-  }
 }
 
 object ExecSubqueryExpression {

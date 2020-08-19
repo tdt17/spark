@@ -32,6 +32,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.util.VersionUtils.majorVersion
 
 /**
  * Params for [[IDF]] and [[IDFModel]].
@@ -194,11 +195,11 @@ object IDFModel extends MLReadable[IDFModel] {
 
   private[IDFModel] class IDFModelWriter(instance: IDFModel) extends MLWriter {
 
-    private case class Data(idf: Vector)
+    private case class Data(idf: Vector, docFreq: Array[Long], numDocs: Long)
 
     override protected def saveImpl(path: String): Unit = {
       DefaultParamsWriter.saveMetadata(instance, path, sc)
-      val data = Data(instance.idf)
+      val data = Data(instance.idf, instance.docFreq, instance.numDocs)
       val dataPath = new Path(path, "data").toString
       sparkSession.createDataFrame(Seq(data)).repartition(1).write.parquet(dataPath)
     }
@@ -212,10 +213,19 @@ object IDFModel extends MLReadable[IDFModel] {
       val metadata = DefaultParamsReader.loadMetadata(path, sc, className)
       val dataPath = new Path(path, "data").toString
       val data = sparkSession.read.parquet(dataPath)
-      val Row(idf: Vector) = MLUtils.convertVectorColumnsToML(data, "idf")
-        .select("idf")
-        .head()
-      val model = new IDFModel(metadata.uid, new feature.IDFModel(OldVectors.fromML(idf)))
+
+      val model = if (majorVersion(metadata.sparkVersion) >= 3) {
+        val Row(idf: Vector, df: Seq[_], numDocs: Long) = data.select("idf", "docFreq", "numDocs")
+          .head()
+        new IDFModel(metadata.uid, new feature.IDFModel(OldVectors.fromML(idf),
+          df.asInstanceOf[Seq[Long]].toArray, numDocs))
+      } else {
+        val Row(idf: Vector) = MLUtils.convertVectorColumnsToML(data, "idf")
+          .select("idf")
+          .head()
+        new IDFModel(metadata.uid,
+          new feature.IDFModel(OldVectors.fromML(idf), new Array[Long](idf.size), 0L))
+      }
       metadata.getAndSetParams(model)
       model
     }

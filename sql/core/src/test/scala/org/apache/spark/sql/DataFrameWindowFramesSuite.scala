@@ -21,7 +21,6 @@ import java.sql.{Date, Timestamp}
 
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.unsafe.types.CalendarInterval
 import org.apache.spark.sql.test.SharedSparkSession
 
@@ -256,8 +255,10 @@ class DataFrameWindowFramesSuite extends QueryTest with SharedSparkSession {
     val df = Seq((ts(1501545600), "1"), (ts(1501545600), "1"), (ts(1609372800), "1"),
       (ts(1503000000), "2"), (ts(1502000000), "1"), (ts(1609372800), "2"))
       .toDF("key", "value")
+    // 23 days 4 hours
+    val interval = new CalendarInterval(0, 23, 4*60*60*1000000)
     val window = Window.partitionBy($"value").orderBy($"key")
-      .rangeBetween(currentRow, lit(CalendarInterval.fromString("interval 23 days 4 hours")))
+      .rangeBetween(currentRow, lit(interval))
 
     checkAnswer(
       df.select(
@@ -274,9 +275,12 @@ class DataFrameWindowFramesSuite extends QueryTest with SharedSparkSession {
     val df = Seq((ts(1501545600), "1"), (ts(1501545600), "1"), (ts(1609372800), "1"),
       (ts(1503000000), "2"), (ts(1502000000), "1"), (ts(1609372800), "2"))
       .toDF("key", "value")
+
+    val interval3Hours = new CalendarInterval(0, 0, 3*60*60*1000000)
+    // 23 days 4 hours
+    val interval23Days4Hours = new CalendarInterval(0, 23, 4*60*60*1000000)
     val window = Window.partitionBy($"value").orderBy($"key")
-      .rangeBetween(lit(CalendarInterval.fromString("interval 3 hours")),
-        lit(CalendarInterval.fromString("interval 23 days 4 hours")))
+      .rangeBetween(lit(interval3Hours), lit(interval23Days4Hours))
 
     checkAnswer(
       df.select(
