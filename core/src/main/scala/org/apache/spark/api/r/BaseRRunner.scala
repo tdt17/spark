@@ -23,9 +23,12 @@ import java.util.Arrays
 
 import scala.io.Source
 import scala.util.Try
+
 import org.apache.spark._
 import org.apache.spark.api.conda.CondaEnvironment.CondaSetupInstructions
+import org.apache.spark.api.conda.CondaEnvironmentManager
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.deploy.Common.Provenance
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config.BUFFER_SIZE
 import org.apache.spark.internal.config.R._
@@ -61,7 +64,7 @@ private[spark] abstract class BaseRRunner[IN, OUT](
 
     // The stdout/stderr is shared by multiple tasks, because we use one daemon
     // to launch child process as worker.
-    val errThread = BaseRRunner.createRWorker(listenPort)
+    val errThread = BaseRRunner.createRWorker(condaSetupInstructions, listenPort)
 
     // We use two sockets to separate input and output, then it's easy to manage
     // the lifecycle of them to avoid deadlock.
@@ -279,18 +282,38 @@ private[r] object BaseRRunner {
     thread
   }
 
-  private def createRProcess(port: Int, script: String): BufferedStreamThread = {
+  private def createRProcess(
+    condaSetupInstructions: Option[CondaSetupInstructions], port: Int, script: String)
+  : BufferedStreamThread = {
+    import collection.JavaConverters._
     // "spark.sparkr.r.command" is deprecated and replaced by "spark.r.command",
     // but kept here for backward compatibility.
     val sparkConf = SparkEnv.get.conf
-    var rCommand = sparkConf.get(SPARKR_COMMAND)
-    rCommand = sparkConf.get(R_COMMAND).orElse(Some(rCommand)).get
+    val requestedRCommand = Provenance.fromConfOpt(sparkConf, R_COMMAND)
+      .getOrElse(Provenance.fromConf(sparkConf, SPARKR_COMMAND))
+    val condaEnv = condaSetupInstructions.map(CondaEnvironmentManager.getOrCreateCondaEnvironment)
+    val rCommand = condaEnv.map { conda =>
+      if (requestedRCommand.value != SPARKR_COMMAND.defaultValue.get) {
+        sys.error(s"It's forbidden to set the r executable " +
+          s"when using conda, but found: ${requestedRCommand.value}")
+      }
+
+      conda.condaEnvDir + "/bin/Rscript"
+    }.getOrElse(requestedRCommand.value)
 
     val rConnectionTimeout = sparkConf.get(R_BACKEND_CONNECTION_TIMEOUT)
     val rOptions = "--vanilla"
-    val rLibDir = RUtils.sparkRPackagePath(isDriver = false)
-    val rExecScript = rLibDir(0) + "/SparkR/worker/" + script
+    val rLibDir = condaEnv.map(conda =>
+      RUtils.sparkRPackagePath(isDriver = false) :+ (conda.condaEnvDir + "/lib/R/library"))
+      .getOrElse(RUtils.sparkRPackagePath(isDriver = false))
+      .filter(dir => new File(dir).exists)
+    if (rLibDir.isEmpty) {
+      throw new SparkException("SparkR package is not installed on executor.")
+    }
+    val rExecScript = RUtils.getSparkRScript(rLibDir, "/SparkR/worker/" + script)
     val pb = new ProcessBuilder(Arrays.asList(rCommand, rOptions, rExecScript))
+    // Activate the conda environment by setting the right env variables if applicable.
+    condaEnv.map(_.activatedEnvironment()).map(_.asJava).foreach(pb.environment().putAll)
     // Unset the R_TESTS environment variable for workers.
     // This is set by R CMD check as startup.Rs
     // (http://svn.r-project.org/R/trunk/src/library/tools/R/testing.R)
@@ -311,7 +334,8 @@ private[r] object BaseRRunner {
   /**
    * ProcessBuilder used to launch worker R processes.
    */
-  def createRWorker(port: Int): BufferedStreamThread = {
+  def createRWorker(condaSetupInstructions: Option[CondaSetupInstructions], port: Int)
+  : BufferedStreamThread = {
     val useDaemon = SparkEnv.get.conf.getBoolean("spark.sparkr.use.daemon", true)
     if (!Utils.isWindows && useDaemon) {
       synchronized {
@@ -319,7 +343,7 @@ private[r] object BaseRRunner {
           // we expect one connections
           val serverSocket = new ServerSocket(0, 1, InetAddress.getByName("localhost"))
           val daemonPort = serverSocket.getLocalPort
-          errThread = createRProcess(daemonPort, "daemon.R")
+          errThread = createRProcess(condaSetupInstructions, daemonPort, "daemon.R")
           // the socket used to send out the input of task
           serverSocket.setSoTimeout(10000)
           val sock = serverSocket.accept()
@@ -345,7 +369,7 @@ private[r] object BaseRRunner {
         errThread
       }
     } else {
-      createRProcess(port, "worker.R")
+      createRProcess(condaSetupInstructions, port, "worker.R")
     }
   }
 }
