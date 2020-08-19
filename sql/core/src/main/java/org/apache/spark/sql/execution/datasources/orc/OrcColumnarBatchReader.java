@@ -146,7 +146,7 @@ public class OrcColumnarBatchReader extends RecordReader<Void, ColumnarBatch> {
       int[] requestedDataColIds,
       int[] requestedPartitionColIds,
       InternalRow partitionValues) {
-    wrap = new VectorizedRowBatchWrap(orcSchema.createRowBatch(capacity));
+    wrap = null; //new VectorizedRowBatchWrap(orcSchema.createRowBatch(capacity));
     assert(!wrap.batch().selectedInUse); // `selectedInUse` should be initialized with `false`.
     assert(requiredFields.length == requestedDataColIds.length);
     assert(requiredFields.length == requestedPartitionColIds.length);
@@ -193,7 +193,7 @@ public class OrcColumnarBatchReader extends RecordReader<Void, ColumnarBatch> {
    * by copying from ORC VectorizedRowBatch columns to Spark ColumnarBatch columns.
    */
   private boolean nextBatch() throws IOException {
-    recordReader.nextBatch(wrap.batch());
+//    recordReader.nextBatch(wrap.batch());
     int batchSize = wrap.batch().size;
     if (batchSize == 0) {
       return false;
