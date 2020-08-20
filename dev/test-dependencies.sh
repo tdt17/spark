@@ -29,12 +29,9 @@ export LC_ALL=C
 # TODO: This would be much nicer to do in SBT, once SBT supports Maven-style resolution.
 
 # NOTE: These should match those in the release publishing script
-# TODO(@jcasale) I have no idea whether or not this is right.
-HADOOP2_MODULE_PROFILES=""
+HADOOP2_MODULE_PROFILES="-Phive-thriftserver -Pmesos -Pkubernetes -Pyarn -Phive"
 MVN="build/mvn"
 HADOOP_HIVE_PROFILES=(
-    hadoop-palantir-hive-1.2
-    hadoop-palantir-hive-2.3
     hadoop-2.7-hive-1.2
     hadoop-2.7-hive-2.3
     hadoop-3.2-hive-2.3
