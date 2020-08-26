@@ -340,7 +340,8 @@ private[spark] class TaskSchedulerImpl(
                                           availableCpus: Array[Int],
                                           availableResources: Array[Map[String, Buffer[String]]],
                                           tasks: IndexedSeq[ArrayBuffer[TaskDescription]],
-                                          addressesWithDescs: ArrayBuffer[(String, TaskDescription)]): Boolean = {
+                                          addressesWithDescs
+                                          : ArrayBuffer[(String, TaskDescription)]): Boolean = {
     var launchedTask = false
     // nodes and executors that are blacklisted for the entire application have already been
     // filtered out by this point

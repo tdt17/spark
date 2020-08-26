@@ -27,8 +27,8 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 
 import org.apache.spark.{SparkConf, SparkUserAppException}
-import org.apache.spark.api.python.{Py4JServer, PythonUtils}
 import org.apache.spark.api.conda.CondaEnvironment
+import org.apache.spark.api.python.Py4JServer
 import org.apache.spark.api.python.PythonUtils
 import org.apache.spark.deploy.Common.Provenance
 import org.apache.spark.internal.Logging

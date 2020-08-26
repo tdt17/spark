@@ -17,10 +17,10 @@
 
 package org.apache.spark.sql
 
+import scala.collection.mutable.ArrayBuffer
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
-
-import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet, SubqueryExpression, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.logical.{Join, LogicalPlan, Sort}
 import org.apache.spark.sql.execution.{ColumnarToRowExec, ExecSubqueryExpression, FileSourceScanExec, InputAdapter, ReusedSubqueryExec, ScalarSubquery, SparkPlan, SubqueryExec, WholeStageCodegenExec}

@@ -127,7 +127,7 @@ private[hive] object IsolatedClientLoader extends Logging {
     val classpath = quietly {
       SparkSubmitUtils.resolveMavenCoordinates(
         hiveArtifacts.mkString(","),
-        //TODO(@jcasale): use palantir hadoop instead of upsteam suggestion
+        // TODO(@jcasale): use palantir hadoop instead of upsteam suggestion
         SparkSubmitUtils.buildIvySettings(
           Some("http://www.datanucleus.org/downloads/maven2," +
             "http://dl.bintray.com/palantir/releases"),

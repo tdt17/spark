@@ -19,13 +19,13 @@ package org.apache.spark.metrics
 
 import com.codahale.metrics.{Gauge, MetricRegistry}
 import org.scalatest.{BeforeAndAfter, PrivateMethodTester}
+import scala.collection.mutable.ArrayBuffer
+
 import org.apache.spark.{SecurityManager, SparkConf, SparkFunSuite}
 import org.apache.spark.deploy.master.MasterSource
 import org.apache.spark.internal.config._
 import org.apache.spark.metrics.sink.Sink
 import org.apache.spark.metrics.source.{Source, StaticSources}
-
-import scala.collection.mutable.ArrayBuffer
 
 class MetricsSystemSuite extends SparkFunSuite with BeforeAndAfter with PrivateMethodTester{
   var filePath: String = _

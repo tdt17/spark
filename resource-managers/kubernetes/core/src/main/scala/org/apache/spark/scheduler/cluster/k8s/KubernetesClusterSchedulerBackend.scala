@@ -19,10 +19,8 @@ package org.apache.spark.scheduler.cluster.k8s
 import java.util.concurrent.{ScheduledExecutorService, TimeUnit}
 
 import com.palantir.logsafe.SafeArg
-import scala.concurrent.Future
-
 import io.fabric8.kubernetes.client.KubernetesClient
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 import org.apache.spark.SparkContext
 import org.apache.spark.deploy.k8s.Config._
@@ -31,8 +29,6 @@ import org.apache.spark.deploy.security.HadoopDelegationTokenManager
 import org.apache.spark.internal.config.SCHEDULER_MIN_REGISTERED_RESOURCES_RATIO
 import org.apache.spark.rpc.RpcAddress
 import org.apache.spark.scheduler.{ExecutorKilled, ExecutorLossReason, TaskSchedulerImpl}
-import org.apache.spark.rpc.RpcAddress
-import org.apache.spark.scheduler.{ExecutorLossReason, TaskSchedulerImpl}
 import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, SchedulerBackendUtils}
 import org.apache.spark.util.{ThreadUtils, Utils}
 

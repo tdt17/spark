@@ -27,8 +27,6 @@ import org.apache.spark.sql.catalyst.util.DateTimeUtils._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.internal.SQLConf.LegacyBehaviorPolicy._
 
-import org.apache.commons.lang3.time.FastDateFormat
-
 sealed trait DateFormatter {
   def parse(s: String): Int // returns days since epoch
 

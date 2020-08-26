@@ -21,8 +21,9 @@ import java.sql.{Date, Timestamp}
 
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.unsafe.types.CalendarInterval
 import org.apache.spark.sql.test.SharedSparkSession
+import org.apache.spark.unsafe.types.CalendarInterval
+
 
 /**
  * Window frame testing for DataFrame API.

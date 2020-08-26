@@ -26,7 +26,6 @@ import java.util.Locale
 import scala.collection.JavaConverters.asScalaBufferConverter
 
 import org.apache.parquet.filter2.predicate._
-import org.apache.parquet.filter2.predicate.SparkFilterApi._
 import org.apache.parquet.filter2.predicate.Operators.{Column, SupportsEqNotEq, SupportsLtGt}
 import org.apache.parquet.hadoop.metadata.ColumnPath
 import org.apache.parquet.io.api.Binary

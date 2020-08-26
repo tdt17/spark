@@ -28,7 +28,6 @@ import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
 import com.palantir.logsafe.{SafeArg, UnsafeArg}
-
 import org.json4s.DefaultFormats
 
 import org.apache.spark._
