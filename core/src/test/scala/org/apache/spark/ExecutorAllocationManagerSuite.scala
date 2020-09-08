@@ -702,51 +702,6 @@ class ExecutorAllocationManagerSuite extends SparkFunSuite {
     assert(firstAddTime !== secondAddTime)
   }
 
-  test("starting/canceling remove timers") {
-    val clock = new ManualClock(14444L)
-    val manager = createManager(createConf(2, 10, 2), clock)
-
-    executorIds(manager).asInstanceOf[mutable.Set[String]] ++= List("1", "2", "3")
-
-    // Starting remove timer is idempotent for each executor
-    assert(removeTimes(manager).isEmpty)
-    onExecutorIdle(manager, "1")
-    assert(removeTimes(manager).size === 1)
-    assert(removeTimes(manager).contains("1"))
-    val firstRemoveTime = removeTimes(manager)("1")
-    assert(firstRemoveTime === clock.getTimeMillis + executorIdleTimeout * 1000)
-    clock.advance(100L)
-    onExecutorIdle(manager, "1")
-    assert(removeTimes(manager)("1") === firstRemoveTime) // timer is already started
-    clock.advance(200L)
-    onExecutorIdle(manager, "1")
-    assert(removeTimes(manager)("1") === firstRemoveTime)
-    clock.advance(300L)
-    onExecutorIdle(manager, "2")
-    assert(removeTimes(manager)("2") !== firstRemoveTime) // different executor
-    assert(removeTimes(manager)("2") === clock.getTimeMillis + executorIdleTimeout * 1000)
-    clock.advance(400L)
-    onExecutorIdle(manager, "3")
-    assert(removeTimes(manager)("3") !== firstRemoveTime)
-    assert(removeTimes(manager)("3") === clock.getTimeMillis + executorIdleTimeout * 1000)
-    assert(removeTimes(manager).size === 3)
-    assert(removeTimes(manager).contains("2"))
-    assert(removeTimes(manager).contains("3"))
-
-    // Restart remove timer
-    clock.advance(1000L)
-    onExecutorBusy(manager, "1")
-    assert(removeTimes(manager).size === 2)
-    onExecutorIdle(manager, "1")
-    assert(removeTimes(manager).size === 3)
-    assert(removeTimes(manager).contains("1"))
-    val secondRemoveTime = removeTimes(manager)("1")
-    assert(secondRemoveTime === clock.getTimeMillis + executorIdleTimeout * 1000)
-    assert(removeTimes(manager)("1") === secondRemoveTime) // timer is already started
-    assert(removeTimes(manager)("1") !== firstRemoveTime)
-    assert(firstRemoveTime !== secondRemoveTime)
-  }
-
   test("mock polling loop with no events") {
     val clock = new ManualClock(2020L)
     val manager = createManager(createConf(0, 20, 0), clock = clock)

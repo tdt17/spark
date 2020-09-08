@@ -351,6 +351,7 @@ class TimestampFormatterSuite extends DatetimeFormatterSuite {
       assert(micros1 === date(2009, 12, 12))
 
       // For `KK`, "12:00:00 am" is the same as "00:00:00 pm".
+      // N.B. this fails in java 14
       val micros2 = formatter.parse("2009-12-12 12 am")
       assert(micros2 === date(2009, 12, 12, 12))
 

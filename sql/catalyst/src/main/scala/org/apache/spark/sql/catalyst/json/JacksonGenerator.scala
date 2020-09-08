@@ -130,14 +130,12 @@ private[sql] class JacksonGenerator(
 
     case TimestampType =>
       (row: SpecializedGetters, ordinal: Int) =>
-        val timestampString =
-          options.timestampFormat.format(DateTimeUtils.toJavaTimestamp(row.getLong(ordinal)))
+        val timestampString = timestampFormatter.format(row.getLong(ordinal))
         gen.writeString(timestampString)
 
     case DateType =>
       (row: SpecializedGetters, ordinal: Int) =>
-        val dateString =
-          options.dateFormat.format(DateTimeUtils.toJavaDate(row.getInt(ordinal)))
+        val dateString = dateFormatter.format(row.getInt(ordinal))
         gen.writeString(dateString)
 
     case CalendarIntervalType =>

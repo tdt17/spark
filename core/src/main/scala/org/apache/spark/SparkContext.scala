@@ -23,22 +23,20 @@ import java.util.{Arrays, Locale, Properties, ServiceLoader, UUID}
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicReference}
 
+import com.google.common.collect.MapMaker
+import com.palantir.logsafe.{SafeArg, UnsafeArg}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.io._
+import org.apache.hadoop.mapred.{Utils => _, _}
+import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat, Job => NewHadoopJob}
+import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFormat}
 import scala.collection.JavaConverters._
 import scala.collection.Map
 import scala.collection.mutable.HashMap
 import scala.language.implicitConversions
 import scala.reflect.{classTag, ClassTag}
 import scala.util.control.NonFatal
-
-import com.google.common.collect.MapMaker
-import com.palantir.logsafe.{SafeArg, UnsafeArg}
-import org.apache.commons.lang3.SerializationUtils
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.{ArrayWritable, BooleanWritable, BytesWritable, DoubleWritable, FloatWritable, IntWritable, LongWritable, NullWritable, Text, Writable}
-import org.apache.hadoop.mapred.{FileInputFormat, InputFormat, JobConf, SequenceFileInputFormat, TextInputFormat}
-import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat, Job => NewHadoopJob}
-import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFormat}
 
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.api.conda.CondaEnvironment
@@ -1856,68 +1854,64 @@ class SparkContext(config: SparkConf) extends SafeLogging {
       }
     }
 
-    if (path == null) {
-      safeLogWarning("null specified as parameter to addJar")
-
-      def checkRemoteJarFile(path: String): String = {
-        val hadoopPath = new Path(path)
-        val scheme = hadoopPath.toUri.getScheme
-        if (!Array("http", "https", "ftp").contains(scheme)) {
-          try {
-            val fs = hadoopPath.getFileSystem(hadoopConfiguration)
-            if (!fs.exists(hadoopPath)) {
-              throw new FileNotFoundException(s"Jar ${path} not found")
-            }
-            if (fs.isDirectory(hadoopPath)) {
-              throw new IllegalArgumentException(
-                s"Directory ${path} is not allowed for addJar")
-            }
-            path
-          } catch {
-            case NonFatal(e) =>
-              safeLogError("Failed to add path to Spark environment", UnsafeArg.of("path", path))
-              null
+    def checkRemoteJarFile(path: String): String = {
+      val hadoopPath = new Path(path)
+      val scheme = hadoopPath.toUri.getScheme
+      if (!Array("http", "https", "ftp").contains(scheme)) {
+        try {
+          val fs = hadoopPath.getFileSystem(hadoopConfiguration)
+          if (!fs.exists(hadoopPath)) {
+            throw new FileNotFoundException(s"Jar ${path} not found")
           }
-        } else {
+          if (fs.isDirectory(hadoopPath)) {
+            throw new IllegalArgumentException(
+              s"Directory ${path} is not allowed for addJar")
+          }
           path
+        } catch {
+          case NonFatal(e) =>
+            safeLogError("Failed to add path to Spark environment", UnsafeArg.of("path", path))
+            null
+        }
+      } else {
+        path
+      }
+    }
+
+    if (path == null || path.isEmpty) {
+      safeLogWarning("null or empty path specified as parameter to addJar")
+    } else {
+      val key = if (path.contains("\\")) {
+        // For local paths with backslashes on Windows, URI throws an exception
+        addLocalJarFile(new File(path))
+      } else {
+        val uri = new Path(path).toUri
+        // SPARK-17650: Make sure this is a valid URL before adding it to the list of dependencies
+        Utils.validateURL(uri)
+        uri.getScheme match {
+          // A JAR file which exists only on the driver node
+          case null =>
+            // SPARK-22585 path without schema is not url encoded
+            addLocalJarFile(new File(uri.getPath))
+          // A JAR file which exists only on the driver node
+          case "file" => addLocalJarFile(new File(uri.getPath))
+          // A JAR file which exists locally on every worker node
+          case "local" => "file:" + uri.getPath
+          case _ => checkRemoteJarFile(path)
         }
       }
-
-      if (path == null || path.isEmpty) {
-        safeLogWarning("null or empty path specified as parameter to addJar")
-      } else {
-        val key = if (path.contains("\\")) {
-          // For local paths with backslashes on Windows, URI throws an exception
-          addLocalJarFile(new File(path))
+      if (key != null) {
+        val timestamp = System.currentTimeMillis
+        if (addedJars.putIfAbsent(key, timestamp).isEmpty) {
+          safeLogInfo("Added JAR",
+            UnsafeArg.of("path", path),
+            UnsafeArg.of("key", key),
+            SafeArg.of("timestamp", timestamp))
+          postEnvironmentUpdate()
         } else {
-          val uri = new Path(path).toUri
-          // SPARK-17650: Make sure this is a valid URL before adding it to the list of dependencies
-          Utils.validateURL(uri)
-          uri.getScheme match {
-            // A JAR file which exists only on the driver node
-            case null =>
-              // SPARK-22585 path without schema is not url encoded
-              addLocalJarFile(new File(uri.getPath))
-            // A JAR file which exists only on the driver node
-            case "file" => addLocalJarFile(new File(uri.getPath))
-            // A JAR file which exists locally on every worker node
-            case "local" => "file:" + uri.getPath
-            case _ => checkRemoteJarFile(path)
-          }
-        }
-        if (key != null) {
-          val timestamp = System.currentTimeMillis
-          if (addedJars.putIfAbsent(key, timestamp).isEmpty) {
-            safeLogInfo("Added JAR",
-              UnsafeArg.of("path", path),
-              UnsafeArg.of("key", key),
-              SafeArg.of("timestamp", timestamp))
-            postEnvironmentUpdate()
-          } else {
-            safeLogWarning("The jar has been added already. Overwriting of added jars " +
-              "is not supported in the current version.",
-              UnsafeArg.of("path", path))
-          }
+          safeLogWarning("The jar has been added already. Overwriting of added jars " +
+            "is not supported in the current version.",
+            UnsafeArg.of("path", path))
         }
       }
     }

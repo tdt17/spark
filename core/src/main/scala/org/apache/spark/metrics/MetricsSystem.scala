@@ -115,8 +115,6 @@ private[spark] class MetricsSystem private (
       sourceToListeners.keySet.foreach(deregisterSource)
       sourceToListeners.clear()
       SharedMetricRegistries.getDefault.removeListener(defaultListener)
-      // TODO(@jcasale): untangle https://github.com/palantir/spark/pull/214 with upstream
-      registry.removeMatching((_: String, _: Metric) => true)
     } else {
       logWarning("Stopping a MetricsSystem that is not running")
     }
@@ -176,7 +174,9 @@ private[spark] class MetricsSystem private (
 
   def deregisterSource(source: Source) {
     val regName = buildRegistryName(source)
-    registry.removeMatching((name: String, _: Metric) => name.startsWith(regName))
+    registry.removeMatching(new MetricFilter {
+      def matches(name: String, metric: Metric): Boolean = name.startsWith(regName)
+    })
     sourceToListeners.get(source).foreach(source.metricRegistry.removeListener)
   }
 
@@ -198,8 +198,8 @@ private[spark] class MetricsSystem private (
     sourceConfigs.foreach { kv =>
       val classPath = kv._2.getProperty("class")
       try {
-        val source = Utils.classForName[Source](classPath).getConstructor().newInstance()
-        registerSource(source)
+        val source = Utils.classForName(classPath).getConstructor().newInstance()
+        registerSource(source.asInstanceOf[Source])
       } catch {
         case e: Exception => logError("Source class " + classPath + " cannot be instantiated", e)
       }
@@ -214,24 +214,13 @@ private[spark] class MetricsSystem private (
       val classPath = kv._2.getProperty("class")
       if (null != classPath) {
         try {
+          val sink = Utils.classForName(classPath)
+            .getConstructor(classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
+            .newInstance(kv._2, registry, securityMgr)
           if (kv._1 == "servlet") {
-            val servlet = Utils.classForName[MetricsServlet](classPath)
-              .getConstructor(
-                classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
-              .newInstance(kv._2, registry, securityMgr)
-            metricsServlet = Some(servlet)
-          } else if (kv._1 == "prometheusServlet") {
-            val servlet = Utils.classForName[PrometheusServlet](classPath)
-              .getConstructor(
-                classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
-              .newInstance(kv._2, registry, securityMgr)
-            prometheusServlet = Some(servlet)
+            metricsServlet = Some(sink.asInstanceOf[MetricsServlet])
           } else {
-            val sink = Utils.classForName[Sink](classPath)
-              .getConstructor(
-                classOf[Properties], classOf[MetricRegistry], classOf[SecurityManager])
-              .newInstance(kv._2, registry, securityMgr)
-            sinks += sink
+            sinks += sink.asInstanceOf[Sink]
           }
         } catch {
           case e: Exception =>

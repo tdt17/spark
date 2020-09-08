@@ -189,7 +189,7 @@ private[spark] class TaskSchedulerImpl(
           new FairSchedulableBuilder(rootPool, conf)
         case _ =>
           throw new IllegalArgumentException(s"Unsupported $SCHEDULER_MODE_PROPERTY: " +
-            s"$schedulingMode")
+          s"$schedulingMode")
       }
     }
     schedulableBuilder.buildPools()
@@ -203,9 +203,7 @@ private[spark] class TaskSchedulerImpl(
     if (!isLocal && conf.get(SPECULATION_ENABLED)) {
       logInfo("Starting speculative execution thread")
       speculationScheduler.scheduleWithFixedDelay(
-        () => Utils.tryOrStopSparkContext(sc) {
-          checkSpeculatableTasks()
-        },
+        () => Utils.tryOrStopSparkContext(sc) { checkSpeculatableTasks() },
         SPECULATION_INTERVAL_MS, SPECULATION_INTERVAL_MS, TimeUnit.MILLISECONDS)
     }
   }
@@ -258,8 +256,8 @@ private[spark] class TaskSchedulerImpl(
 
   // Label as private[scheduler] to allow tests to swap in different task set managers if necessary
   private[scheduler] def createTaskSetManager(
-                                               taskSet: TaskSet,
-                                               maxTaskFailures: Int): TaskSetManager = {
+      taskSet: TaskSet,
+      maxTaskFailures: Int): TaskSetManager = {
     new TaskSetManager(this, taskSet, maxTaskFailures, blacklistTrackerOpt)
   }
 
@@ -277,9 +275,9 @@ private[spark] class TaskSchedulerImpl(
   }
 
   override def killTaskAttempt(
-                                taskId: Long,
-                                interruptThread: Boolean,
-                                reason: String): Boolean = synchronized {
+      taskId: Long,
+      interruptThread: Boolean,
+      reason: String): Boolean = synchronized {
     logInfo(s"Killing task $taskId: $reason")
     val execId = taskIdToExecutorId.get(taskId)
     if (execId.isDefined) {
@@ -292,9 +290,9 @@ private[spark] class TaskSchedulerImpl(
   }
 
   override def killAllTaskAttempts(
-                                    stageId: Int,
-                                    interruptThread: Boolean,
-                                    reason: String): Unit = synchronized {
+      stageId: Int,
+      interruptThread: Boolean,
+      reason: String): Unit = synchronized {
     logInfo(s"Killing all running tasks in stage $stageId: $reason")
     taskSetsByStageIdAndAttempt.get(stageId).foreach { attempts =>
       attempts.foreach { case (_, tsm) =>
@@ -334,14 +332,13 @@ private[spark] class TaskSchedulerImpl(
   }
 
   private def resourceOfferSingleTaskSet(
-                                          taskSet: TaskSetManager,
-                                          maxLocality: TaskLocality,
-                                          shuffledOffers: Seq[WorkerOffer],
-                                          availableCpus: Array[Int],
-                                          availableResources: Array[Map[String, Buffer[String]]],
-                                          tasks: IndexedSeq[ArrayBuffer[TaskDescription]],
-                                          addressesWithDescs
-                                          : ArrayBuffer[(String, TaskDescription)]): Boolean = {
+      taskSet: TaskSetManager,
+      maxLocality: TaskLocality,
+      shuffledOffers: Seq[WorkerOffer],
+      availableCpus: Array[Int],
+      availableResources: Array[Map[String, Buffer[String]]],
+      tasks: IndexedSeq[ArrayBuffer[TaskDescription]],
+      addressesWithDescs: ArrayBuffer[(String, TaskDescription)]) : Boolean = {
     var launchedTask = false
     // nodes and executors that are blacklisted for the entire application have already been
     // filtered out by this point
@@ -436,8 +433,7 @@ private[spark] class TaskSchedulerImpl(
     val tasks = shuffledOffers.map(o => new ArrayBuffer[TaskDescription](o.cores / CPUS_PER_TASK))
     val availableResources = shuffledOffers.map(_.resources).toArray
     val availableCpus = shuffledOffers.map(o => o.cores).toArray
-    val availableSlots = shuffledOffers.map(o => o.cores / CPUS_PER_TASK).sum
-    val sortedTaskSets = rootPool.getSortedTaskSetQueue
+    val sortedTaskSets = rootPool.getSortedTaskSetQueue.filterNot(_.isZombie)
     for (taskSet <- sortedTaskSets) {
       logDebug("parentName: %s, name: %s, runningTasks: %s".format(
         taskSet.parent.name, taskSet.name, taskSet.runningTasks))
@@ -450,6 +446,7 @@ private[spark] class TaskSchedulerImpl(
     // of locality levels so that it gets a chance to launch local tasks on all of them.
     // NOTE: the preferredLocality order: PROCESS_LOCAL, NODE_LOCAL, NO_PREF, RACK_LOCAL, ANY
     for (taskSet <- sortedTaskSets) {
+      val availableSlots = availableCpus.map(c => c / CPUS_PER_TASK).sum
       // Skip the barrier taskSet if the available slots are less than the number of pending tasks.
       if (taskSet.isBarrier && availableSlots < taskSet.numTasks) {
         // Skip the launch process.
@@ -474,35 +471,35 @@ private[spark] class TaskSchedulerImpl(
 
         if (!launchedAnyTask) {
           taskSet.getCompletelyBlacklistedTaskIfAny(hostToExecutors).foreach { taskIndex =>
-            // If the taskSet is unschedulable we try to find an existing idle blacklisted
-            // executor. If we cannot find one, we abort immediately. Else we kill the idle
-            // executor and kick off an abortTimer which if it doesn't schedule a task within the
-            // the timeout will abort the taskSet if we were unable to schedule any task from the
-            // taskSet.
-            // Note 1: We keep track of schedulability on a per taskSet basis rather than on a per
-            // task basis.
-            // Note 2: The taskSet can still be aborted when there are more than one idle
-            // blacklisted executors and dynamic allocation is on. This can happen when a killed
-            // idle executor isn't replaced in time by ExecutorAllocationManager as it relies on
-            // pending tasks and doesn't kill executors on idle timeouts, resulting in the abort
-            // timer to expire and abort the taskSet.
-            executorIdToRunningTaskIds.find(x => !isExecutorBusy(x._1)) match {
-              case Some((executorId, _)) =>
-                if (!unschedulableTaskSetToExpiryTime.contains(taskSet)) {
-                  blacklistTrackerOpt.foreach(blt => blt.killBlacklistedIdleExecutor(executorId))
+              // If the taskSet is unschedulable we try to find an existing idle blacklisted
+              // executor. If we cannot find one, we abort immediately. Else we kill the idle
+              // executor and kick off an abortTimer which if it doesn't schedule a task within the
+              // the timeout will abort the taskSet if we were unable to schedule any task from the
+              // taskSet.
+              // Note 1: We keep track of schedulability on a per taskSet basis rather than on a per
+              // task basis.
+              // Note 2: The taskSet can still be aborted when there are more than one idle
+              // blacklisted executors and dynamic allocation is on. This can happen when a killed
+              // idle executor isn't replaced in time by ExecutorAllocationManager as it relies on
+              // pending tasks and doesn't kill executors on idle timeouts, resulting in the abort
+              // timer to expire and abort the taskSet.
+              executorIdToRunningTaskIds.find(x => !isExecutorBusy(x._1)) match {
+                case Some ((executorId, _)) =>
+                  if (!unschedulableTaskSetToExpiryTime.contains(taskSet)) {
+                    blacklistTrackerOpt.foreach(blt => blt.killBlacklistedIdleExecutor(executorId))
 
-                  val timeout = conf.get(config.UNSCHEDULABLE_TASKSET_TIMEOUT) * 1000
-                  unschedulableTaskSetToExpiryTime(taskSet) = clock.getTimeMillis() + timeout
-                  logInfo(s"Waiting for $timeout ms for completely "
-                    + s"blacklisted task to be schedulable again before aborting $taskSet.")
-                  abortTimer.schedule(
-                    createUnschedulableTaskSetAbortTimer(taskSet, taskIndex), timeout)
-                }
-              case None => // Abort Immediately
-                logInfo("Cannot schedule any task because of complete blacklisting. No idle" +
-                  s" executors can be found to kill. Aborting $taskSet.")
-                taskSet.abortSinceCompletelyBlacklisted(taskIndex)
-            }
+                    val timeout = conf.get(config.UNSCHEDULABLE_TASKSET_TIMEOUT) * 1000
+                    unschedulableTaskSetToExpiryTime(taskSet) = clock.getTimeMillis() + timeout
+                    logInfo(s"Waiting for $timeout ms for completely "
+                      + s"blacklisted task to be schedulable again before aborting $taskSet.")
+                    abortTimer.schedule(
+                      createUnschedulableTaskSetAbortTimer(taskSet, taskIndex), timeout)
+                  }
+                case None => // Abort Immediately
+                  logInfo("Cannot schedule any task because of complete blacklisting. No idle" +
+                    s" executors can be found to kill. Aborting $taskSet." )
+                  taskSet.abortSinceCompletelyBlacklisted(taskIndex)
+              }
           }
         } else {
           // We want to defer killing any taskSets as long as we have a non blacklisted executor
@@ -554,19 +551,19 @@ private[spark] class TaskSchedulerImpl(
 
     // TODO SPARK-24823 Cancel a job that contains barrier stage(s) if the barrier tasks don't get
     // launched within a configured time.
-    if (tasks.size > 0) {
+    if (tasks.nonEmpty) {
       hasLaunchedTask = true
     }
     return tasks
   }
 
   private def createUnschedulableTaskSetAbortTimer(
-                                                    taskSet: TaskSetManager,
-                                                    taskIndex: Int): TimerTask = {
+      taskSet: TaskSetManager,
+      taskIndex: Int): TimerTask = {
     new TimerTask() {
       override def run(): Unit = TaskSchedulerImpl.this.synchronized {
         if (unschedulableTaskSetToExpiryTime.contains(taskSet) &&
-          unschedulableTaskSetToExpiryTime(taskSet) <= clock.getTimeMillis()) {
+            unschedulableTaskSetToExpiryTime(taskSet) <= clock.getTimeMillis()) {
           logInfo("Cannot schedule any task because of complete blacklisting. " +
             s"Wait time for scheduling expired. Aborting $taskSet.")
           taskSet.abortSinceCompletelyBlacklisted(taskIndex)

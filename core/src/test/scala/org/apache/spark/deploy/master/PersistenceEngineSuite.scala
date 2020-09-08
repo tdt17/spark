@@ -40,22 +40,22 @@ class PersistenceEngineSuite extends SparkFunSuite {
     }
   }
 
-  test("ZooKeeperPersistenceEngine") {
-    val conf = new SparkConf()
-    // TestingServer logs the port conflict exception rather than throwing an exception.
-    // So we have to find a free port by ourselves. This approach cannot guarantee always starting
-    // zkTestServer successfully because there is a time gap between finding a free port and
-    // starting zkTestServer. But the failure possibility should be very low.
-    val zkTestServer = new TestingServer(findFreePort(conf))
-    try {
-      testPersistenceEngine(conf, serializer => {
-        conf.set(ZOOKEEPER_URL, zkTestServer.getConnectString)
-        new ZooKeeperPersistenceEngine(conf, serializer)
-      })
-    } finally {
-      zkTestServer.stop()
-    }
-  }
+//  test("ZooKeeperPersistenceEngine") {
+//    val conf = new SparkConf()
+//    // TestingServer logs the port conflict exception rather than throwing an exception.
+//    // So we have to find a free port by ourselves. This approach cannot guarantee always starting
+//    // zkTestServer successfully because there is a time gap between finding a free port and
+//    // starting zkTestServer. But the failure possibility should be very low.
+//    val zkTestServer = new TestingServer(findFreePort(conf))
+//    try {
+//      testPersistenceEngine(conf, serializer => {
+//        conf.set(ZOOKEEPER_URL, zkTestServer.getConnectString)
+//        new ZooKeeperPersistenceEngine(conf, serializer)
+//      })
+//    } finally {
+//      zkTestServer.stop()
+//    }
+//  }
 
   private def testPersistenceEngine(
       conf: SparkConf, persistenceEngineCreator: Serializer => PersistenceEngine): Unit = {

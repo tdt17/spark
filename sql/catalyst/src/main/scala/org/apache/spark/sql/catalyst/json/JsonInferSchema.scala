@@ -120,13 +120,20 @@ private[sql] class JsonInferSchema(options: JSONOptions) extends Serializable {
         // record fields' types have been combined.
         NullType
 
-      case VALUE_STRING if options.prefersDecimal =>
-        val decimalTry = allCatch opt {
-          val bigDecimal = decimalParser(parser.getText)
+      case VALUE_STRING =>
+        val field = parser.getText
+        lazy val decimalTry = allCatch opt {
+          val bigDecimal = decimalParser(field)
             DecimalType(bigDecimal.precision, bigDecimal.scale)
         }
-        decimalTry.getOrElse(StringType)
-      case VALUE_STRING => StringType
+        if (options.prefersDecimal && decimalTry.isDefined) {
+          decimalTry.get
+        } else if (options.inferTimestamp &&
+            (allCatch opt timestampFormatter.parse(field)).isDefined) {
+          TimestampType
+        } else {
+          StringType
+        }
 
       case START_OBJECT =>
         val builder = Array.newBuilder[StructField]

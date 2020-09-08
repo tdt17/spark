@@ -26,7 +26,7 @@ import scala.util.control.NonFatal
 import com.fasterxml.jackson.core._
 
 import org.apache.spark.SparkUpgradeException
-import org.apache.spark.internal.SafeLogging
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.util._
@@ -42,7 +42,7 @@ import org.apache.spark.util.Utils
 class JacksonParser(
     schema: DataType,
     val options: JSONOptions,
-    allowArrayAsStructs: Boolean) extends SafeLogging {
+    allowArrayAsStructs: Boolean) extends Logging {
 
   import JacksonUtils._
   import com.fasterxml.jackson.core.JsonToken._
@@ -188,7 +188,7 @@ class JacksonParser(
         case VALUE_NUMBER_INT | VALUE_NUMBER_FLOAT =>
           parser.getFloatValue
 
-        case VALUE_STRING =>
+        case VALUE_STRING if parser.getTextLength >= 1 =>
           // Special case handling for NaN and Infinity.
           parser.getText match {
             case "NaN" => Float.NaN
@@ -204,7 +204,7 @@ class JacksonParser(
         case VALUE_NUMBER_INT | VALUE_NUMBER_FLOAT =>
           parser.getDoubleValue
 
-        case VALUE_STRING =>
+        case VALUE_STRING if parser.getTextLength >= 1 =>
           // Special case handling for NaN and Infinity.
           parser.getText match {
             case "NaN" => Double.NaN
@@ -340,8 +340,8 @@ class JacksonParser(
   private val allowEmptyString = SQLConf.get.getConf(SQLConf.LEGACY_ALLOW_EMPTY_STRING_IN_JSON)
 
   /**
-   * This function throws an exception for failed conversion, but returns null for empty string,
-   * to guard the non string types.
+   * This function throws an exception for failed conversion. For empty string on data types
+   * except for string and binary types, this also throws an exception.
    */
   private def failedConversion[R >: Null](
       parser: JsonParser,
@@ -358,11 +358,8 @@ class JacksonParser(
       }
 
     case VALUE_STRING if parser.getTextLength < 1 =>
-      safeLogInfo("Would have dropped empty record. " +
-        "Likely you have empty strings for nested values")
-      // If conversion is failed, this produces `null` rather than throwing exception.
-      // This will protect the mismatch of types.
-      null
+      throw new RuntimeException(
+        s"Failed to parse an empty string for data type ${dataType.catalogString}")
 
     case token =>
       // We cannot parse this token based on the given data type. So, we throw a

@@ -19,7 +19,6 @@ package org.apache.spark.sql.catalyst.csv
 
 import java.io.InputStream
 
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import com.univocity.parsers.csv.CsvParser

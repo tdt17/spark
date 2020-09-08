@@ -27,7 +27,7 @@ import org.apache.spark.sql.catalyst.util.DateTimeUtils._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.internal.SQLConf.LegacyBehaviorPolicy._
 
-sealed trait DateFormatter {
+sealed trait DateFormatter extends Serializable {
   def parse(s: String): Int // returns days since epoch
 
   def format(days: Int): String

@@ -234,7 +234,7 @@ case class MapPartitionsInRWithArrowExec(
 
       val runner = new ArrowRRunner(func, packageNames, broadcastVars, inputSchema,
         SQLConf.get.sessionLocalTimeZone, RRunnerModes.DATAFRAME_DAPPLY,
-      condaSetupInstructions = condaInstructions)
+        condaSetupInstructions = condaInstructions)
 
       // The communication mechanism is as follows:
       //

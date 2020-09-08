@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.catalyst.parser
 
-import java.sql.{Date, Timestamp}
 import java.util.Locale
 import javax.xml.bind.DatatypeConverter
 
