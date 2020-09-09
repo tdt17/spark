@@ -57,8 +57,8 @@ class ArrowRRunner(
     packageNames,
     broadcastVars,
     condaSetupInstructions,
-    numPartitions = -1,
-    isDataFrame = true,
+    -1,
+    true,
     schema.fieldNames,
     mode) {
 

@@ -252,11 +252,28 @@ case class MapPartitionsInRWithArrowExec(
       // binary in a batch due to the limitation of R API. See also ARROW-4512.
       val columnarBatchIter = runner.compute(batchIter, -1)
       val outputProject = UnsafeProjection.create(output, output)
-      columnarBatchIter.flatMap { batch =>
-        val actualDataTypes = (0 until batch.numCols()).map(i => batch.column(i).dataType())
-        assert(outputTypes == actualDataTypes, "Invalid schema from dapply(): " +
-          s"expected ${outputTypes.mkString(", ")}, got ${actualDataTypes.mkString(", ")}")
-        batch.rowIterator.asScala
+      new Iterator[InternalRow] {
+
+        private var currentIter = if (columnarBatchIter.hasNext) {
+          val batch = columnarBatchIter.next()
+          val actualDataTypes = (0 until batch.numCols()).map(i => batch.column(i).dataType())
+          assert(outputTypes == actualDataTypes, "Invalid schema from dapply(): " +
+            s"expected ${outputTypes.mkString(", ")}, got ${actualDataTypes.mkString(", ")}")
+          batch.rowIterator.asScala
+        } else {
+          Iterator.empty
+        }
+
+        override def hasNext: Boolean = currentIter.hasNext || {
+          if (columnarBatchIter.hasNext) {
+            currentIter = columnarBatchIter.next().rowIterator.asScala
+            hasNext
+          } else {
+            false
+          }
+        }
+
+        override def next(): InternalRow = currentIter.next()
       }.map(outputProject)
     }
   }
@@ -464,6 +481,8 @@ case class FlatMapGroupsInRExec(
 
   override def outputPartitioning: Partitioning = child.outputPartitioning
 
+  override def producedAttributes: AttributeSet = AttributeSet(outputObjAttr)
+
   override def requiredChildDistribution: Seq[Distribution] =
     if (groupingAttributes.isEmpty) {
       AllTuples :: Nil
@@ -490,7 +509,8 @@ case class FlatMapGroupsInRExec(
       val runner = new RRunner[(Array[Byte], Iterator[Array[Byte]]), Array[Byte]](
         func, SerializationFormats.ROW, serializerForR, packageNames, broadcastVars,
         isDataFrame = true, colNames = inputSchema.fieldNames,
-        mode = RRunnerModes.DATAFRAME_GAPPLY, condaSetupInstructions = condaInstructions)
+        mode = RRunnerModes.DATAFRAME_GAPPLY,
+        condaSetupInstructions = condaInstructions)
 
       val groupedRBytes = grouped.map { case (key, rowIter) =>
         val deserializedIter = rowIter.map(getValue)
@@ -559,9 +579,9 @@ case class FlatMapGroupsInRWithArrowExec(
           rowIter
         }
 
-      val runner = new ArrowRRunner(
-        func, packageNames, broadcastVars, inputSchema, SQLConf.get.sessionLocalTimeZone,
-        RRunnerModes.DATAFRAME_GAPPLY, condaSetupInstructions = condaInstructions) {
+      val runner = new ArrowRRunner(func, packageNames, broadcastVars, inputSchema,
+        SQLConf.get.sessionLocalTimeZone, RRunnerModes.DATAFRAME_GAPPLY,
+        condaSetupInstructions = condaInstructions) {
         protected override def bufferedWrite(
             dataOut: DataOutputStream)(writeFunc: ByteArrayOutputStream => Unit): Unit = {
           super.bufferedWrite(dataOut)(writeFunc)
