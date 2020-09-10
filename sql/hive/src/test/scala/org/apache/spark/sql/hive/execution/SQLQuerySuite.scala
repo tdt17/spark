@@ -1356,7 +1356,7 @@ abstract class SQLQuerySuiteBase extends QueryTest with SQLTestUtils with TestHi
     })
   }
 
-  test("run sql directly on files - orc") {
+  test("hlog run sql directly on files - orc") {
     val df = spark.range(100).toDF()
     withTempPath(f => {
       df.write.orc(f.getCanonicalPath)
