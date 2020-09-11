@@ -18,17 +18,12 @@
 package org.apache.spark.security
 
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.security.Credentials
-
 import org.apache.spark.SparkConf
 import org.apache.spark.annotation.DeveloperApi
 
-/**
- * ::DeveloperApi::
- * Hadoop delegation token provider.
- */
-@DeveloperApi
-trait HadoopDelegationTokenProvider {
+private[spark] trait HadoopDelegationTokenProvider {
 
   /**
    * Name of the service to provide delegation tokens. This name should be unique.  Spark will
@@ -52,5 +47,6 @@ trait HadoopDelegationTokenProvider {
   def obtainDelegationTokens(
     hadoopConf: Configuration,
     sparkConf: SparkConf,
+    fileSystems: Set[FileSystem],
     creds: Credentials): Option[Long]
 }
