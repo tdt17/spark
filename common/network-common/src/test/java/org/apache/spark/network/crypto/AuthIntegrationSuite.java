@@ -131,9 +131,8 @@ public class AuthIntegrationSuite {
     ctx = new AuthTestCtx(new RpcHandler() {
       @Override
       public void receive(
-          TransportClient client,
-          ByteBuffer message,
-          RpcResponseCallback callback) {
+              TransportClient client, ByteBuffer message, RpcResponseCallback callback
+      ) {
         char[] longMessage = new char[testErrorMessageLength];
         Arrays.fill(longMessage, 'D');
         callback.onFailure(new RuntimeException(new String(longMessage)));
@@ -160,7 +159,7 @@ public class AuthIntegrationSuite {
     }
   }
 
-  private class AuthTestCtx {
+  private static class AuthTestCtx {
 
     private final String appId = "testAppId";
     private final TransportConf conf;
