@@ -19,7 +19,7 @@ FROM palantirtechnologies/circle-spark-base:0.2.3
 
 # Install R and SparkR dependencies
 RUN $CONDA_BIN install --yes --channel r \
-    r-base=3.4.3 r-knitr r-rmarkdown r-e1071 r-survival r-testthat r-lintr r-roxygen2 r-devtools
+    r-base=4.0.2 r-knitr r-rmarkdown r-e1071 r-survival r-testthat r-lintr r-roxygen2 r-devtools
 
 # Install qpdf (used for SparkR documentation, required in R tests)
 USER root
