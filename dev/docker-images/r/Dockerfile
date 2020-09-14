@@ -18,12 +18,13 @@
 FROM palantirtechnologies/circle-spark-base:0.2.4
 
 # Install R and SparkR dependencies
-RUN $CONDA_BIN install --yes --channel r \
-    r-base=4.0.2 r-knitr r-rmarkdown r-e1071 r-survival r-testthat r-lintr r-roxygen2 r-devtools
+# Rscript -e "install.packages(c('knitr', 'rmarkdown', 'devtools', 'testthat', 'e1071', 'survival'), repos='https://cloud.r-project.org/')"
+RUN $CONDA_BIN install --yes --channel conda-forge \
+    r-base=3.5 r-knitr r-rmarkdown r-e1071 r-survival r-testthat r-devtools
 
 # Install qpdf (used for SparkR documentation, required in R tests)
 USER root
-RUN apt-get update && apt-get install qpdf
+RUN apt-get update && apt-get install pandoc
 USER circleci
 
 # Add conda-installed R to path

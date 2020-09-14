@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-FROM palantirtechnologies/circle-spark-base:0.2.3
+FROM palantirtechnologies/circle-spark-base:0.2.4
 
 # Install pyenv
 RUN curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
