@@ -70,7 +70,7 @@ RUN apt-get clean && apt-get update && $APT_INSTALL gnupg ca-certificates && \
   pip3 install $PIP_PKGS && \
   # Install R packages and dependencies used when building.
   # R depends on pandoc*, libssl (which are installed above).
-  $APT_INSTALL r-base r-base-dev && \
+  $APT_INSTALL r-base=4.0.2 r-base-dev=4.0.2 && \
   $APT_INSTALL texlive-latex-base texlive texlive-fonts-extra texinfo qpdf && \
   Rscript -e "install.packages(c('curl', 'xml2', 'httr', 'devtools', 'testthat', 'knitr', 'rmarkdown', 'roxygen2', 'e1071', 'survival'), repos='https://cloud.r-project.org/')" && \
   Rscript -e "devtools::install_github('jimhester/lintr')" && \
