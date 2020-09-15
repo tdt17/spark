@@ -179,6 +179,7 @@
     <commons.collections.version>3.2.2</commons.collections.version>
     <scala.version>2.12.10</scala.version>
     <scala.binary.version>2.12</scala.binary.version>
+    <scalatest-maven-plugin.version>2.0.0</scalatest-maven-plugin.version>
     <scalafmt.parameters>--test</scalafmt.parameters>
     <!-- for now, not running scalafmt as part of default verify pipeline -->
     <scalafmt.skip>true</scalafmt.skip>
@@ -277,7 +278,8 @@
     <spark.test.webdriver.chrome.driver></spark.test.webdriver.chrome.driver>
 
     <CodeCacheSize>1g</CodeCacheSize>
-    <extraScalaTestArgs></extraScalaTestArgs>
+    <!-- Needed for consistent times -->
+    <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss z</maven.build.timestamp.format>
   </properties>
   <distributionManagement>
     <repository>
@@ -2790,13 +2792,13 @@
         <plugin>
           <groupId>org.scalatest</groupId>
           <artifactId>scalatest-maven-plugin</artifactId>
-          <version>2.0.0</version>
+          <version>${scalatest-maven-plugin.version}</version>
           <!-- Note config is repeated in surefire config -->
           <configuration>
             <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
             <junitxml>.</junitxml>
             <filereports>SparkTestSuite.txt</filereports>
-            <argLine>-ea -Xmx4g -Xss4m -XX:ReservedCodeCacheSize=${CodeCacheSize} -Dio.netty.tryReflectionSetAccessible=true ${extraScalaTestArgs}</argLine>
+            <argLine>-ea -Xmx4g -Xss4m -XX:ReservedCodeCacheSize=${CodeCacheSize} -Dio.netty.tryReflectionSetAccessible=true</argLine>
             <stderr/>
             <environmentVariables>
               <!--
