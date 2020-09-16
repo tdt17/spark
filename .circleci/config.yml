@@ -8,7 +8,6 @@ defaults: &defaults
     TERM: dumb
     BUILD_SBT_CACHE: "/home/circleci/build-sbt-cache"
 
-
 test-defaults: &test-defaults
   <<: *defaults
   environment:
@@ -132,24 +131,24 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.4
     steps:
-#      # Saves us from recompiling every time...
-#      - restore_cache:
-#          keys:
-#            - build-maven-{{ .Branch }}-{{ .BuildNum }}
-#            - build-maven-{{ .Branch }}-
+      # Saves us from recompiling every time...
+      - restore_cache:
+          keys:
+            - build-maven-{{ .Branch }}-{{ .BuildNum }}
+            - build-maven-{{ .Branch }}-
 #            - build-maven-master-
       - *checkout-code
-#      - restore_cache:
-#          keys:
-#            - maven-dependency-cache-{{ checksum "pom.xml" }}
-#            # Fallback - see https://circleci.com/docs/2.0/configuration-reference/#example-2
-#            - maven-dependency-cache-
-#      # Given the build-maven cache, this is superfluous, but leave it in in case we will want to remove the former
-#      - restore_cache:
-#          keys:
-#            - build-binaries-{{ checksum "build/mvn" }}-{{ checksum "build/sbt" }}
-#            - build-binaries-
-      - run: ./build/mvn -DskipTests -Psparkr install -X
+      - restore_cache:
+          keys:
+            - maven-dependency-cache-{{ checksum "pom.xml" }}
+            # Fallback - see https://circleci.com/docs/2.0/configuration-reference/#example-2
+            - maven-dependency-cache-
+      # Given the build-maven cache, this is superfluous, but leave it in in case we will want to remove the former
+      - restore_cache:
+          keys:
+            - build-binaries-{{ checksum "build/mvn" }}-{{ checksum "build/sbt" }}
+            - build-binaries-
+      - run: ./build/mvn -DskipTests -Psparkr install
       # Get sbt to run trivially, ensures its launcher is downloaded under build/
       - run: ./build/sbt -h || true
       - save_cache:
