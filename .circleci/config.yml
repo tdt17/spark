@@ -132,11 +132,12 @@ jobs:
       - image: palantirtechnologies/circle-spark-r:0.2.4
     steps:
       # Saves us from recompiling every time...
-      - restore_cache:
-          keys:
-            - build-maven-{{ .Branch }}-{{ .BuildNum }}
-            - build-maven-{{ .Branch }}-
-#            - build-maven-master-
+      # (And causes compilation failures.)
+      #- restore_cache:
+      #    keys:
+      #      - build-maven-{{ .Branch }}-{{ .BuildNum }}
+      #      - build-maven-{{ .Branch }}-
+      #      - build-maven-master-
       - *checkout-code
       - restore_cache:
           keys:
@@ -154,15 +155,15 @@ jobs:
       - save_cache:
           key: build-binaries-{{ checksum "build/mvn" }}-{{ checksum "build/sbt" }}
           paths:
-            - "build"
+            - ./build
       - save_cache:
           key: maven-dependency-cache-{{ checksum "pom.xml" }}
           paths:
-            - "~/.m2"
+            - ~/.m2
       # And finally save the whole project directory
-      - save_cache:
-          key: build-maven-{{ .Branch }}-{{ .BuildNum }}
-          paths: .
+      #- save_cache:
+      #    key: build-maven-{{ .Branch }}-{{ .BuildNum }}
+      #    paths: .
   build-spark-docker-gradle-plugin:
     <<: *defaults
     steps:
@@ -199,8 +200,8 @@ jobs:
     resource_class: small
     steps:
       - *checkout-code
-      - restore_cache:
-          key: build-maven-{{ .Branch }}-{{ .BuildNum }}
+      #- restore_cache:
+      #    key: build-maven-{{ .Branch }}-{{ .BuildNum }}
       - restore_cache:
           key: maven-dependency-cache-{{ checksum "pom.xml" }}
       - *restore-build-binaries-cache
