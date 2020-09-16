@@ -58,7 +58,7 @@ case class OrcScanBuilder(
       OrcFilters.createFilter(schema, filters).foreach { f =>
         // The pushed filters will be set in `hadoopConf`. After that, we can simply use the
         // changed `hadoopConf` in executors.
-//        OrcInputFormat.setSearchArgument(hadoopConf, f, schema.fieldNames)
+        OrcInputFormat.setSearchArgument(hadoopConf, f, schema.fieldNames)
       }
       val dataTypeMap = schema.map(f => quoteIfNeeded(f.name) -> f.dataType).toMap
       // TODO (SPARK-25557): ORC doesn't support nested predicate pushdown, so they are removed.

@@ -155,7 +155,7 @@ class OrcFileFormat
       hadoopConf: Configuration): (PartitionedFile) => Iterator[InternalRow] = {
     if (sparkSession.sessionState.conf.orcFilterPushDown) {
       OrcFilters.createFilter(dataSchema, filters).foreach { f =>
-//        OrcInputFormat.setSearchArgument(hadoopConf, f, dataSchema.fieldNames)
+        OrcInputFormat.setSearchArgument(hadoopConf, f, dataSchema.fieldNames)
       }
     }
 

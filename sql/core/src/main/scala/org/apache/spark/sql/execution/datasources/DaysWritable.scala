@@ -20,8 +20,8 @@ package org.apache.spark.sql.execution.datasources
 import java.io.{DataInput, DataOutput, IOException}
 import java.sql.Date
 
-import org.apache.hadoop.hive.serde2.io.DateWritable
 import org.apache.hadoop.io.WritableUtils
+import org.apache.orc.storage.serde2.io.DateWritable
 
 import org.apache.spark.sql.catalyst.util.RebaseDateTime.{rebaseGregorianToJulianDays, rebaseJulianToGregorianDays}
 
