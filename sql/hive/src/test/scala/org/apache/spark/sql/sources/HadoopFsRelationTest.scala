@@ -137,7 +137,8 @@ abstract class HadoopFsRelationTest extends QueryTest with SQLTestUtils with Tes
         logInfo(s"Testing $dataType data type$extraMessage")
 
         val extraOptions = Map[String, String](
-          "parquet.enable.dictionary" -> parquetDictionaryEncodingEnabled.toString
+          "parquet.enable.dictionary" -> parquetDictionaryEncodingEnabled.toString,
+          "timestampFormat" -> "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
         )
 
         withTempPath { file =>
