@@ -20,11 +20,10 @@ package org.apache.spark.sql.execution.datasources.orc
 import java.time.{Instant, LocalDate}
 
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
+import org.apache.hadoop.hive.ql.io.sarg.{PredicateLeaf, SearchArgument}
+import org.apache.hadoop.hive.ql.io.sarg.SearchArgument.Builder
+import org.apache.hadoop.hive.ql.io.sarg.SearchArgumentFactory.newBuilder
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
-import org.apache.orc.storage.ql.io.sarg.PredicateLeaf
-import org.apache.orc.storage.ql.io.sarg.SearchArgument
-import org.apache.orc.storage.ql.io.sarg.SearchArgument.Builder
-import org.apache.orc.storage.ql.io.sarg.SearchArgumentFactory.newBuilder
 
 import org.apache.spark.SparkException
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.{instantToMicros, localDateToDays, toJavaDate, toJavaTimestamp}
