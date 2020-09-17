@@ -148,7 +148,9 @@
     <okio.version>1.15.0</okio.version>
     <jetty.version>9.4.12.v20180830</jetty.version>
     <orc.version>1.5.10</orc.version>
-    <orc.classifier></orc.classifier>
+    <!-- Setting 'nohive' like in palantir/spark was causing type-mismatch errors. -->
+    <!-- <orc.classifier>nohive</orc.classifier> -->
+     <orc.classifier></orc.classifier>
     <hive.parquet.group>com.twitter</hive.parquet.group>
     <hive.parquet.version>1.6.0</hive.parquet.version>
     <jetty.version>9.4.18.v20190429</jetty.version>
