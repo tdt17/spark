@@ -17,12 +17,13 @@
 # limitations under the License.
 #
 
-from __future__ import print_function
 import logging
+import os
 
 from build_environment import get_build_environment, modules_to_test
 from sparktestsupport.shellutils import subprocess_check_output
 from test_functions import *
+
 
 LOGGER = logging.getLogger()
 
@@ -33,17 +34,20 @@ if __name__ == '__main__':
     env = get_build_environment()
     mtt = modules_to_test(env)
 
-    circleNodeIndex = os.getenv("CIRCLE_NODE_INDEX")
-    circleNodeTotal = os.getenv("CIRCLE_NODE_TOTAL")
-    if circleNodeTotal is not None:
-        length = len(all_python_executables)
-        fromExec = int(circleNodeIndex) * length / int(circleNodeTotal)
-        toExec = (int(circleNodeIndex) + 1) * length / int(circleNodeTotal)
-        python_executables_for_run = all_python_executables[fromExec:toExec]
+    total_circle_nodes = int(os.getenv("CIRCLE_NODE_TOTAL", 0))
+    if total_circle_nodes > 0:
+        total_py_executables = len(all_python_executables)
+        assert total_py_executables == total_circle_nodes, \
+            f"CircleCI parallelism ('CIRCLE_NODE_TOTAL') should be f{total_py_executables} but was: {total_circle_nodes}"
+
+        assert "CIRCLE_NODE_INDEX" in os.environ, "CIRCLE_NODE_INDEX not set"
+        circle_node_index = int(os.getenv("CIRCLE_NODE_INDEX"))
+
+        python_executables_for_run = all_python_executables[circle_node_index:circle_node_index + 1]
     else:
         python_executables_for_run = all_python_executables
 
-    LOGGER.info("Testing following python executables in this run: %s", python_executables_for_run)
+    LOGGER.info("Testing following python executable in this run: %s", python_executables_for_run)
 
     modules_with_python_tests = [m for m in mtt.test_modules if m.python_test_goals]
     if modules_with_python_tests:
@@ -55,7 +59,7 @@ if __name__ == '__main__':
             subprocess_check_output(
                 [python_exec, "-c", "import platform; print(platform.python_version())"],
                 universal_newlines=True).strip()
-            for python_exec in python_executables_for_run
+            for python_exec in python_executables_for_this_run
         ]
         LOGGER.info("Running python packaging tests for following python versions using conda: %s",
                     python_exact_versions)
