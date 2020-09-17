@@ -109,8 +109,8 @@ def run_individual_python_test(target_dir, test_name, pyspark_python, failed_tes
 
         def consume_log(output):
             for line in process.stdout:
-                print("({}) {} - {}".format(pyspark_python, test_name, line), end=b'')
-                print(line, file=output, end=b'')
+                print("({}) {} - {}".format(pyspark_python, test_name, line), end='')
+                print(line, file=output, end='')
 
         worker = Thread(target=consume_log, args=(per_test_output,))
         worker.start()  # This is essential as we need to consume the stdout pipe
