@@ -26,8 +26,7 @@ import java.util.Locale
 import scala.collection.JavaConverters.asScalaBufferConverter
 
 import org.apache.parquet.filter2.predicate._
-import org.apache.parquet.filter2.predicate.Operators.{Column, SupportsEqNotEq, SupportsLtGt}
-import org.apache.parquet.hadoop.metadata.ColumnPath
+import org.apache.parquet.filter2.predicate.SparkFilterApi._
 import org.apache.parquet.io.api.Binary
 import org.apache.parquet.schema.{DecimalMetadata, GroupType, MessageType, OriginalType, PrimitiveComparator, PrimitiveType, Type}
 import org.apache.parquet.schema.OriginalType._
@@ -124,8 +123,6 @@ class ParquetFilters(
   private val ParquetDateType = ParquetSchemaType(DATE, INT32, 0, null)
   private val ParquetTimestampMicrosType = ParquetSchemaType(TIMESTAMP_MICROS, INT64, 0, null)
   private val ParquetTimestampMillisType = ParquetSchemaType(TIMESTAMP_MILLIS, INT64, 0, null)
-
-  import ParquetColumns._
 
   private def dateToDays(date: Any): SQLDate = date match {
     case d: Date => DateTimeUtils.fromJavaDate(d)
@@ -511,6 +508,15 @@ class ParquetFilters(
     // which can be casted to `false` implicitly. Please refer to the `eval` method of these
     // operators and the `PruneFilters` rule for details.
 
+    // Hyukjin:
+    // I added [[EqualNullSafe]] with [[org.apache.parquet.filter2.predicate.Operators.Eq]].
+    // So, it performs equality comparison identically when given [[sources.Filter]] is [[EqualTo]].
+    // The reason why I did this is, that the actual Parquet filter checks null-safe equality
+    // comparison.
+    // So I added this and maybe [[EqualTo]] should be changed. It still seems fine though, because
+    // physical planning does not set `NULL` to [[EqualTo]] but changes it to [[IsNull]] and etc.
+    // Probably I missed something and obviously this should be changed.
+
     predicate match {
       case sources.IsNull(name) if canMakeFilterOn(name, null) =>
         makeEq.lift(nameToParquetField(name).fieldType)
@@ -591,7 +597,6 @@ class ParquetFilters(
       case sources.Not(pred) =>
         createFilterHelper(pred, canPartialPushDownConjuncts = false)
           .map(FilterApi.not)
-          .map(LogicalInverseRewriter.rewrite)
 
       case sources.In(name, values) if canMakeFilterOn(name, values.head)
         && values.distinct.length <= pushDownInFilterThreshold =>
@@ -634,64 +639,5 @@ class ParquetFilters(
 
       case _ => None
     }
-  }
-}
-
-private[parquet] case class SetInFilter[T <: Comparable[T]](valueSet: Set[T])
-  extends UserDefinedPredicate[T] with Serializable {
-
-  override def keep(value: T): Boolean = {
-    value != null && valueSet.contains(value)
-  }
-
-  // Drop when no value in the set is within the statistics range.
-  override def canDrop(statistics: Statistics[T]): Boolean = {
-    val statMax = statistics.getMax
-    val statMin = statistics.getMin
-    val statRange = com.google.common.collect.Range.closed(statMin, statMax)
-    !valueSet.exists(value => statRange.contains(value))
-  }
-
-  // Can only drop not(in(set)) when we are know that every element in the block is in valueSet.
-  // From the statistics, we can only be assured of this when min == max.
-  override def inverseCanDrop(statistics: Statistics[T]): Boolean = {
-    val statMax = statistics.getMax
-    val statMin = statistics.getMin
-    statMin == statMax && valueSet.contains(statMin)
-  }
-}
-
-/**
- * Note that, this is a hacky workaround to allow dots in column names. Currently, column APIs
- * in Parquet's `FilterApi` only allows dot-separated names so here we resemble those columns
- * but only allow single column path that allows dots in the names as we don't currently push
- * down filters with nested fields.
- */
-private[parquet] object ParquetColumns {
-  def binaryColumn(columnPath: Array[String]): Column[Binary] with SupportsLtGt = {
-    new Column[Binary] (ColumnPath.get(columnPath: _*), classOf[Binary]) with SupportsLtGt
-  }
-  def intColumn(columnPath: Array[String]): Column[Integer] with SupportsLtGt = {
-    new Column[Integer] (ColumnPath.get(columnPath: _*), classOf[Integer]) with SupportsLtGt
-  }
-
-  def longColumn(columnPath: Array[String]): Column[java.lang.Long] with SupportsLtGt = {
-    new Column[java.lang.Long] (
-      ColumnPath.get(columnPath: _*), classOf[java.lang.Long]) with SupportsLtGt
-  }
-
-  def floatColumn(columnPath: Array[String]): Column[java.lang.Float] with SupportsLtGt = {
-    new Column[java.lang.Float] (
-      ColumnPath.get(columnPath: _*), classOf[java.lang.Float]) with SupportsLtGt
-  }
-
-  def doubleColumn(columnPath: Array[String]): Column[java.lang.Double] with SupportsLtGt = {
-    new Column[java.lang.Double] (
-      ColumnPath.get(columnPath: _*), classOf[java.lang.Double]) with SupportsLtGt
-  }
-
-  def booleanColumn(columnPath: Array[String]): Column[java.lang.Boolean] with SupportsEqNotEq = {
-    new Column[java.lang.Boolean] (
-      ColumnPath.get(columnPath: _*), classOf[java.lang.Boolean]) with SupportsEqNotEq
   }
 }

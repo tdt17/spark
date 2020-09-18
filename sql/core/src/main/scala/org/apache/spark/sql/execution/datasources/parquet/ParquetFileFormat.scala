@@ -17,28 +17,23 @@
 
 package org.apache.spark.sql.execution.datasources.parquet
 
-import java.io.{FileNotFoundException, IOException}
+import java.io.IOException
 import java.net.URI
-import java.util.concurrent.{Callable, TimeUnit}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.{Failure, Try}
 
-import com.google.common.cache.{Cache, CacheBuilder, RemovalListener, RemovalNotification}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.hadoop.mapreduce._
-import org.apache.hadoop.mapreduce.lib.input.FileSplit
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
 import org.apache.parquet.filter2.compat.FilterCompat
 import org.apache.parquet.filter2.predicate.FilterApi
-import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.format.converter.ParquetMetadataConverter.SKIP_ROW_GROUPS
 import org.apache.parquet.hadoop._
 import org.apache.parquet.hadoop.ParquetOutputFormat.JobSummaryLevel
 import org.apache.parquet.hadoop.codec.CodecConfig
-import org.apache.parquet.hadoop.metadata.ParquetMetadata
 import org.apache.parquet.hadoop.util.ContextUtil
 import org.apache.parquet.schema.MessageType
 
@@ -201,69 +196,6 @@ class ParquetFileFormat
     true
   }
 
-  override def buildSplitter(
-    sparkSession: SparkSession,
-    fileIndex: FileIndex,
-    filters: Seq[Filter],
-    schema: StructType,
-    hadoopConf: Configuration): (FileStatus => Seq[FileSplit]) = {
-    val pruningEnabled = sparkSession.sessionState.conf.parquetPartitionPruningEnabled
-    val defaultSplitter = super.buildSplitter(sparkSession, fileIndex, filters, schema, hadoopConf)
-    if (!pruningEnabled || filters.isEmpty) {
-      // Return immediately to save FileSystem overhead
-      defaultSplitter
-    } else {
-      val splitters = fileIndex.rootPaths.map { root =>
-        val splits = ParquetFileFormat.fileSplits.get(root,
-          new Callable[ParquetFileSplitter] {
-            override def call(): ParquetFileSplitter =
-              createParquetFileSplits(root, hadoopConf, sparkSession)
-          })
-        root -> splits.buildSplitter(filters)
-      }.toMap
-      val compositeSplitter: (FileStatus => Seq[FileSplit]) = { stat =>
-        val filePath = stat.getPath
-        val rootOption: Option[Path] = fileIndex.rootPaths
-          .find(root => filePath.toString.startsWith(root.toString))
-        val splitterForPath = rootOption.flatMap(splitters.get).getOrElse(defaultSplitter)
-        splitterForPath(stat)
-      }
-      compositeSplitter
-    }
-  }
-
-  private def createParquetFileSplits(
-    root: Path,
-    hadoopConf: Configuration,
-    sparkSession: SparkSession): ParquetFileSplitter = {
-    getMetadataForPath(root, hadoopConf)
-      .map { meta =>
-        new ParquetMetadataFileSplitter(
-          root, meta.getBlocks.asScala, meta.getFileMetaData.getSchema, sparkSession)
-      }
-      .getOrElse(ParquetDefaultFileSplitter)
-  }
-
-  private def getMetadataForPath(
-      rootPath: Path,
-      conf: Configuration): Option[ParquetMetadata] = {
-    val fs = rootPath.getFileSystem(conf)
-    try {
-      val stat = fs.getFileStatus(rootPath)
-      // Mimic Parquet behavior. If given a directory, find the underlying _metadata file
-      // If given a single file, check the parent directory for a _metadata file
-      val directory = if (stat.isDirectory) stat.getPath else stat.getPath.getParent
-      val metadataFile = new Path(directory, ParquetFileWriter.PARQUET_METADATA_FILE)
-      val metadata =
-        ParquetFileReader.readFooter(conf, metadataFile, ParquetMetadataConverter.NO_FILTER)
-      Option(metadata)
-    } catch {
-      case notFound: FileNotFoundException =>
-        log.debug(s"No _metadata file found in root $rootPath")
-        None
-    }
-  }
-
   override def buildReaderWithPartitionValues(
       sparkSession: SparkSession,
       dataSchema: StructType,
@@ -299,6 +231,7 @@ class ParquetFileFormat
       SQLConf.PARQUET_INT96_AS_TIMESTAMP.key,
       sparkSession.sessionState.conf.isParquetINT96AsTimestamp)
 
+    // TODO(@jcasale) do we need this?
     // By default, disable record level filtering.
     if (hadoopConf.get(ParquetInputFormat.RECORD_FILTERING_ENABLED) == null) {
       hadoopConf.setBoolean(ParquetInputFormat.RECORD_FILTERING_ENABLED, false)
@@ -455,21 +388,6 @@ class ParquetFileFormat
 }
 
 object ParquetFileFormat extends Logging {
-
-  @transient private val fileSplits: Cache[Path, ParquetFileSplitter] =
-    CacheBuilder.newBuilder()
-      .expireAfterAccess(4, TimeUnit.HOURS)
-      .concurrencyLevel(1)
-      .softValues()
-      .removalListener(new RemovalListener[Path, ParquetFileSplitter] {
-          override def onRemoval(removalNotification:
-                                 RemovalNotification[Path, ParquetFileSplitter]): Unit = {
-            val path = removalNotification.getKey
-            log.info(s"Removing value for path $path from cache, " +
-              s"cause: ${removalNotification.getCause}")
-          }
-      }).build()
-
   private[parquet] def readSchema(
       footers: Seq[Footer], sparkSession: SparkSession): Option[StructType] = {
 

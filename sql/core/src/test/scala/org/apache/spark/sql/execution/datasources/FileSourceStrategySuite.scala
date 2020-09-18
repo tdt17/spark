@@ -578,8 +578,7 @@ class FileSourceStrategySuite extends QueryTest with SharedSparkSession with Pre
    */
   def createTable(
       files: Seq[(String, Int)],
-      buckets: Int = 0,
-      format: String = classOf[TestFileFormat].getName): DataFrame = {
+      buckets: Int = 0): DataFrame = {
     val tempDir = Utils.createTempDir()
     files.foreach {
       case (name, size) =>
@@ -589,7 +588,7 @@ class FileSourceStrategySuite extends QueryTest with SharedSparkSession with Pre
     }
 
     val df = spark.read
-      .format(format)
+      .format(classOf[TestFileFormat].getName)
       .load(tempDir.getCanonicalPath)
 
     if (buckets > 0) {
@@ -674,22 +673,6 @@ class TestFileFormat extends TextBasedFileFormat {
   }
 }
 
-/**
- * A test [[FileFormat]] that records the arguments passed to buildReader, and returns nothing.
- * Unlike the one above, this one has a nested schema.
- */
-class TestFileFormatWithNestedSchema extends TestFileFormat {
-  override def inferSchema(
-      sparkSession: SparkSession,
-      options: Map[String, String],
-      files: Seq[FileStatus]): Option[StructType] =
-    Some(StructType(Nil)
-      .add("a1", IntegerType)
-      .add("a2",
-         StructType(Nil)
-           .add("c1", IntegerType)
-           .add("c2", IntegerType)))
-}
 
 class LocalityTestFileSystem extends RawLocalFileSystem {
   private val invocations = new AtomicInteger(0)

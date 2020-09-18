@@ -521,12 +521,6 @@ case class FileSourceScanExec(
       selectedPartitions: Array[PartitionDirectory],
       fsRelation: HadoopFsRelation): RDD[InternalRow] = {
     logInfo(s"Planning with ${bucketSpec.numBuckets} buckets")
-    val session = fsRelation.sparkSession
-    val format = fsRelation.fileFormat
-    val splitter =
-      format.buildSplitter(session, fsRelation.location,
-        dataFilters.flatMap(DataSourceStrategy.translateFilter(_, true)), schema,
-        session.sessionState.newHadoopConf())
     val filesGroupedToBuckets =
       selectedPartitions.flatMap { p =>
         p.files.map { f =>
@@ -566,17 +560,11 @@ case class FileSourceScanExec(
       readFile: (PartitionedFile) => Iterator[InternalRow],
       selectedPartitions: Array[PartitionDirectory],
       fsRelation: HadoopFsRelation): RDD[InternalRow] = {
-    val session = fsRelation.sparkSession
-    val format = fsRelation.fileFormat
     val openCostInBytes = fsRelation.sparkSession.sessionState.conf.filesOpenCostInBytes
     val maxSplitBytes =
       FilePartition.maxSplitBytes(fsRelation.sparkSession, selectedPartitions)
     logInfo(s"Planning scan with bin packing, max size: $maxSplitBytes bytes, " +
       s"open cost is considered as scanning $openCostInBytes bytes.")
-    val splitter =
-      format.buildSplitter(session, fsRelation.location,
-        dataFilters.flatMap(DataSourceStrategy.translateFilter(_, true)), schema,
-        session.sessionState.newHadoopConf())
 
     val splitFiles = selectedPartitions.flatMap { partition =>
       partition.files.flatMap { file =>
@@ -590,8 +578,7 @@ case class FileSourceScanExec(
           filePath = filePath,
           isSplitable = isSplitable,
           maxSplitBytes = maxSplitBytes,
-          partitionValues = partition.values,
-          splitter = splitter
+          partitionValues = partition.values
         )
       }
     }.sortBy(_.length)(implicitly[Ordering[Long]].reverse)

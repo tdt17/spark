@@ -737,11 +737,6 @@ object SQLConf {
     .booleanConf
     .createWithDefault(false)
 
-  val PARQUET_PARTITION_PRUNING_ENABLED = buildConf("spark.sql.parquet.enablePartitionPruning")
-      .doc("Enables driver-side partition pruning for Parquet.")
-      .booleanConf
-      .createWithDefault(false)
-
   val PARQUET_VECTORIZED_READER_BATCH_SIZE = buildConf("spark.sql.parquet.columnarReaderBatchSize")
     .doc("The number of rows to include in a parquet vectorized reader batch. The number should " +
       "be carefully chosen to minimize overhead and avoid OOMs in reading data.")
@@ -2779,8 +2774,6 @@ class SQLConf extends Serializable with Logging {
 
   def parquetVectorizedReaderEnabled: Boolean = getConf(PARQUET_VECTORIZED_READER_ENABLED)
 
-  def parquetPartitionPruningEnabled: Boolean = getConf(PARQUET_PARTITION_PRUNING_ENABLED)
-
   def parquetVectorizedReaderBatchSize: Int = getConf(PARQUET_VECTORIZED_READER_BATCH_SIZE)
 
   def columnBatchSize: Int = getConf(COLUMN_BATCH_SIZE)
@@ -2946,28 +2939,6 @@ class SQLConf extends Serializable with Logging {
   def parquetOutputTimestampType: ParquetOutputTimestampType.Value = {
     ParquetOutputTimestampType.withName(getConf(PARQUET_OUTPUT_TIMESTAMP_TYPE))
   }
-// TODO(@jcasale) make sure we're ok to drop this change
-// https://github.com/palantir/spark/pull/284/commits/13ee031684c1a0b4a439adb6f85b23159556277d
-//  def parquetOutputTimestampType: ParquetOutputTimestampType.Value = {
-//    val isOutputTimestampTypeSet = settings.containsKey(PARQUET_OUTPUT_TIMESTAMP_TYPE.key)
-//
-//    if (isParquetINT64AsTimestampMillis && isParquetTimestampAsINT96) {
-//      // conflicting configs for INT64 and INT96, tie-breaking with PARQUET_OUTPUT_TIMESTAMP_TYPE
-//      ParquetOutputTimestampType.withName(getConf(PARQUET_OUTPUT_TIMESTAMP_TYPE))
-//    } else if (!isOutputTimestampTypeSet && isParquetINT64AsTimestampMillis) {
-//      // If PARQUET_OUTPUT_TIMESTAMP_TYPE is not set and PARQUET_INT64_AS_TIMESTAMP_MILLIS is set,
-//      // respect PARQUET_INT64_AS_TIMESTAMP_MILLIS and use TIMESTAMP_MILLIS.
-//      ParquetOutputTimestampType.TIMESTAMP_MILLIS
-//    } else if (!isOutputTimestampTypeSet && isParquetTimestampAsINT96) {
-//      // If PARQUET_OUTPUT_TIMESTAMP_TYPE is not set and PARQUET_TIMESTAMP_AS_INT96 is set,
-//      // respect PARQUET_TIMESTAMP_AS_INT96 and use INT96.
-//      ParquetOutputTimestampType.INT96
-//    } else {
-//      // Otherwise, PARQUET_OUTPUT_TIMESTAMP_TYPE has higher priority.
-//      ParquetOutputTimestampType.withName(getConf(PARQUET_OUTPUT_TIMESTAMP_TYPE))
-//    }
-//  }
-
 
   def writeLegacyParquetFormat: Boolean = getConf(PARQUET_WRITE_LEGACY_FORMAT)
 
