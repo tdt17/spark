@@ -22,7 +22,6 @@ import java.time.ZoneId
 import java.util.Locale
 
 import com.univocity.parsers.csv.{CsvParserSettings, CsvWriterSettings, UnescapedQuoteHandling}
-import org.apache.commons.lang3.time.FastDateFormat
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util._
@@ -221,7 +220,9 @@ class CSVOptions(
     format.setQuote(quote)
     format.setQuoteEscape(escape)
     charToEscapeQuoteEscaping.foreach(format.setCharToEscapeQuoteEscaping)
-    format.setComment(comment)
+    if (isCommentSet) {
+      format.setComment(comment)
+    }
     lineSeparatorInWrite.foreach(format.setLineSeparator)
 
     writerSettings.setIgnoreLeadingWhitespaces(ignoreLeadingWhiteSpaceFlagInWrite)
@@ -243,7 +244,11 @@ class CSVOptions(
     format.setQuoteEscape(escape)
     lineSeparator.foreach(format.setLineSeparator)
     charToEscapeQuoteEscaping.foreach(format.setCharToEscapeQuoteEscaping)
-    format.setComment(comment)
+    if (isCommentSet) {
+      format.setComment(comment)
+    } else {
+      settings.setCommentProcessingEnabled(false)
+    }
 
     settings.setIgnoreLeadingWhitespaces(ignoreLeadingWhiteSpaceInRead)
     settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhiteSpaceInRead)
