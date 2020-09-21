@@ -25,7 +25,7 @@ import org.apache.spark.sql.catalyst.plans.SQLHelper
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
-class CSVInferSchemaSuite extends SparkFunSuite  with SQLHelper {
+class CSVInferSchemaSuite extends SparkFunSuite with SQLHelper {
 
   test("String fields types are inferred correctly from null types") {
     val options = new CSVOptions(Map("timestampFormat" -> "yyyy-MM-dd HH:mm:ss"), false, "UTC")

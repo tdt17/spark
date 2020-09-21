@@ -115,12 +115,6 @@ abstract class DataType extends AbstractDataType {
   override private[sql] def acceptsType(other: DataType): Boolean = sameType(other)
 }
 
-private object JSortedObject {
-  def unapplySeq(value: JValue): Option[List[(String, JValue)]] = value match {
-    case JObject(seq) => Some(seq.toList.sortBy(_._1))
-    case _ => None
-  }
-}
 
 /**
  * @since 1.3.0
@@ -155,6 +149,13 @@ object DataType {
         other,
         throw new IllegalArgumentException(
           s"Failed to convert the JSON string '$name' to a data type."))
+    }
+  }
+
+  private object JSortedObject {
+    def unapplySeq(value: JValue): Option[List[(String, JValue)]] = value match {
+      case JObject(seq) => Some(seq.toList.sortBy(_._1))
+      case _ => None
     }
   }
 
@@ -327,19 +328,19 @@ object DataType {
       ignoreNullability: Boolean = false): Boolean = {
     (from, to) match {
       case (left: ArrayType, right: ArrayType) =>
-        equalsStructurally(left.elementType, right.elementType) &&
+        equalsStructurally(left.elementType, right.elementType, ignoreNullability) &&
           (ignoreNullability || left.containsNull == right.containsNull)
 
       case (left: MapType, right: MapType) =>
-        equalsStructurally(left.keyType, right.keyType) &&
-          equalsStructurally(left.valueType, right.valueType) &&
+        equalsStructurally(left.keyType, right.keyType, ignoreNullability) &&
+          equalsStructurally(left.valueType, right.valueType, ignoreNullability) &&
           (ignoreNullability || left.valueContainsNull == right.valueContainsNull)
 
       case (StructType(fromFields), StructType(toFields)) =>
         fromFields.length == toFields.length &&
           fromFields.zip(toFields)
             .forall { case (l, r) =>
-              equalsStructurally(l.dataType, r.dataType) &&
+              equalsStructurally(l.dataType, r.dataType, ignoreNullability) &&
                 (ignoreNullability || l.nullable == r.nullable)
             }
 

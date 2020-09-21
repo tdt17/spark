@@ -620,13 +620,7 @@ object SQLConf {
     .stringConf
     .transform(_.toUpperCase(Locale.ROOT))
     .checkValues(ParquetOutputTimestampType.values.map(_.toString))
-    .createWithDefault(ParquetOutputTimestampType.TIMESTAMP_MICROS.toString)
-
-  val PARQUET_TIMESTAMP_AS_INT96 = buildConf("spark.sql.parquet.timestampAsInt96")
-    .doc(s"(Deprecated, please set ${PARQUET_OUTPUT_TIMESTAMP_TYPE.key} instead). Write " +
-      "timestamps as int96 to maintain legacy compatibility")
-    .booleanConf
-    .createWithDefault(false)
+    .createWithDefault(ParquetOutputTimestampType.INT96.toString)
 
   val PARQUET_COMPRESSION = buildConf("spark.sql.parquet.compression.codec")
     .doc("Sets the compression codec used when writing Parquet files. If either `compression` or " +
@@ -1584,8 +1578,8 @@ object SQLConf {
   val NDV_MAX_ERROR =
     buildConf("spark.sql.statistics.ndv.maxError")
       .internal()
-      .doc("The maximum estimation error allowed in HyperLogLog++ algorithm when generating " +
-        "column level statistics.")
+      .doc("The maximum relative standard deviation allowed in HyperLogLog++ algorithm " +
+        "when generating column level statistics.")
       .version("2.1.1")
       .doubleConf
       .createWithDefault(0.05)
@@ -2328,15 +2322,6 @@ object SQLConf {
       "(nonnegative and shorter than the maximum size).")
     .createWithDefaultString(s"${ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH}")
 
-  val MAX_REPEATED_ALIAS_SIZE =
-    buildConf("spark.sql.maxRepeatedAliasSize")
-      .internal()
-      .doc("The maximum size of alias expression that will be substituted multiple times " +
-        "(size defined by the number of nodes in the expression tree). " +
-        "Used by the CollapseProject optimizer, and PhysicalOperation.")
-      .intConf
-      .createWithDefault(100)
-
   val SET_COMMAND_REJECTS_SPARK_CORE_CONFS =
     buildConf("spark.sql.legacy.setCommandRejectsSparkCoreConfs")
       .internal()
@@ -2942,8 +2927,6 @@ class SQLConf extends Serializable with Logging {
 
   def writeLegacyParquetFormat: Boolean = getConf(PARQUET_WRITE_LEGACY_FORMAT)
 
-  def isParquetTimestampAsINT96: Boolean = getConf(PARQUET_TIMESTAMP_AS_INT96)
-
   def parquetRecordFilterEnabled: Boolean = getConf(PARQUET_RECORD_FILTER_ENABLED)
 
   def inMemoryPartitionPruning: Boolean = getConf(IN_MEMORY_PARTITION_PRUNING)
@@ -3165,8 +3148,6 @@ class SQLConf extends Serializable with Logging {
   def maxToStringFields: Int = getConf(SQLConf.MAX_TO_STRING_FIELDS)
 
   def maxPlanStringLength: Int = getConf(SQLConf.MAX_PLAN_STRING_LENGTH).toInt
-
-  def maxRepeatedAliasSize: Int = getConf(SQLConf.MAX_REPEATED_ALIAS_SIZE)
 
   def setCommandRejectsSparkCoreConfs: Boolean =
     getConf(SQLConf.SET_COMMAND_REJECTS_SPARK_CORE_CONFS)
