@@ -32,7 +32,6 @@ if sys.version < '3':
     import Queue
 else:
     import queue as Queue
-from collections import deque
 from multiprocessing import Manager
 
 
@@ -52,7 +51,7 @@ def print_red(text):
     print('\033[31m' + text + '\033[0m')
 
 
-SKIPPED_TESTS = Manager().dict()
+SKIPPED_TESTS = None
 LOG_FILE = os.path.join(SPARK_HOME, "python/unit-tests.log")
 FAILURE_REPORTING_LOCK = Lock()
 LOGGER = logging.getLogger()
@@ -68,7 +67,7 @@ else:
     raise Exception("Cannot find assembly build directory, please build Spark first.")
 
 
-def run_individual_python_test(target_dir, test_name, pyspark_python, failed_tests_deque):
+def run_individual_python_test(target_dir, test_name, pyspark_python):
     env = dict(os.environ)
     env.update({
         'SPARK_DIST_CLASSPATH': SPARK_DIST_CLASSPATH,
@@ -98,32 +97,19 @@ def run_individual_python_test(target_dir, test_name, pyspark_python, failed_tes
 
     LOGGER.info("Starting test(%s): %s", pyspark_python, test_name)
     start_time = time.time()
-    # This line must come before the try block, file shouldn't be closed before 'worker' is done
-    per_test_output = tempfile.TemporaryFile(mode='w+')
     try:
-        process = subprocess.Popen(
-            [os.path.join(SPARK_HOME, "bin/pyspark"), test_name],
-            # bufsize must be 0 (unbuffered), 1 (line buffered) doesn't seem to work
-            stderr=subprocess.STDOUT, stdout=subprocess.PIPE, env=env, bufsize=0,
-            universal_newlines=True)
-
-        def consume_log(output):
-            for line in process.stdout:
-                print("({}) {} - {}".format(pyspark_python, test_name, line), end='')
-                print(line, file=output, end='')
-
-        worker = Thread(target=consume_log, args=(per_test_output,))
-        worker.start()  # This is essential as we need to consume the stdout pipe
-        retcode = process.wait()
+        per_test_output = tempfile.TemporaryFile()
+        retcode = subprocess.Popen(
+            [os.path.join(SPARK_HOME, "bin/pyspark")] + test_name.split(),
+            stderr=per_test_output, stdout=per_test_output, env=env).wait()
         shutil.rmtree(tmp_dir, ignore_errors=True)
     except:
         LOGGER.exception("Got exception while running %s with %s", test_name, pyspark_python)
         # Here, we use os._exit() instead of sys.exit() in order to force Python to exit even if
         # this code is invoked from a thread other than the main thread.
-        os._exit(-1)
+        os._exit(1)
     duration = time.time() - start_time
-    worker.join()  # Wait on the thread that consumed the output
-    # If it failed, append output to LOG_FILE, add to failed tests and carry on
+    # Exit on the first failure.
     if retcode != 0:
         try:
             with FAILURE_REPORTING_LOCK:
@@ -140,7 +126,9 @@ def run_individual_python_test(target_dir, test_name, pyspark_python, failed_tes
             LOGGER.exception("Got an exception while trying to print failed test output")
         finally:
             print_red("\nHad test failures in %s with %s; see logs." % (test_name, pyspark_python))
-            failed_tests_deque.append((test_name, pyspark_python))
+            # Here, we use os._exit() instead of sys.exit() in order to force Python to exit even if
+            # this code is invoked from a thread other than the main thread.
+            os._exit(-1)
     else:
         skipped_counts = 0
         try:
@@ -154,6 +142,7 @@ def run_individual_python_test(target_dir, test_name, pyspark_python, failed_tes
             skipped_counts = len(skipped_tests)
             if skipped_counts > 0:
                 key = (pyspark_python, test_name)
+                assert SKIPPED_TESTS is not None
                 SKIPPED_TESTS[key] = skipped_tests
             per_test_output.close()
         except:
@@ -173,7 +162,7 @@ def run_individual_python_test(target_dir, test_name, pyspark_python, failed_tes
 
 
 def get_default_python_executables():
-    python_execs = [x for x in ["python3.6", "python2.7", "pypy"] if which(x)]
+    python_execs = [x for x in ["python3.8", "python2.7", "pypy3", "pypy"] if which(x)]
 
     if "python3.6" not in python_execs:
         p = which("python3")
@@ -302,22 +291,20 @@ def main():
     if not os.path.isdir(target_dir):
         os.mkdir(target_dir)
 
-    def process_queue(task_queue, failed_tests_deque):
+    def process_queue(task_queue):
         while True:
             try:
                 (priority, (python_exec, test_goal)) = task_queue.get_nowait()
             except Queue.Empty:
                 break
             try:
-                run_individual_python_test(target_dir, test_goal, python_exec, failed_tests_deque)
+                run_individual_python_test(target_dir, test_goal, python_exec)
             finally:
                 task_queue.task_done()
 
-    # Using a deque because it supports thread-safe appends
-    failed_tests_deque = deque()
     start_time = time.time()
     for _ in range(opts.parallelism):
-        worker = Thread(target=process_queue, args=(task_queue, failed_tests_deque))
+        worker = Thread(target=process_queue, args=(task_queue,))
         worker.daemon = True
         worker.start()
     try:
@@ -326,12 +313,6 @@ def main():
         print_red("Exiting due to interrupt")
         sys.exit(-1)
     total_duration = time.time() - start_time
-    if len(failed_tests_deque) != 0:
-        LOGGER.error("%i tests failed after %i seconds:", len(failed_tests_deque), total_duration)
-        for test_and_python in failed_tests_deque:
-            print_red("\nHad test failures in %s with %s; see logs." % test_and_python)
-        sys.exit(-1)
-
     LOGGER.info("Tests passed in %i seconds", total_duration)
 
     for key, lines in sorted(SKIPPED_TESTS.items()):
@@ -342,4 +323,5 @@ def main():
 
 
 if __name__ == "__main__":
+    SKIPPED_TESTS = Manager().dict()
     main()
