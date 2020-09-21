@@ -191,9 +191,8 @@ class ParquetInteroperabilitySuite extends ParquetCompatibilityTest with SharedS
                 // when the data is read back as mentioned above, b/c int96 is unsigned.  This
                 // assert makes sure this holds even if we change parquet versions (if eg. there
                 // were ever statistics even on unsigned columns).
-                assert(!oneBlockColumnMeta.getStatistics.hasNonNullValue)
+                // assert(!oneBlockColumnMeta.getStatistics.hasNonNullValue)
 
-                // TODO(@jcasale): sanity check this
                 // Note: This is not true in palantir/parquet-mr and statistics are always returned
                 // and they are always unsigned.
                 assert(oneFooter.getFileMetaData.getCreatedBy.contains("impala") ^

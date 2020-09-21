@@ -191,8 +191,7 @@ case class AdaptiveSparkPlanExec(
           case StageSuccess(stage, res) =>
             stage.resultOption = Some(res)
           case StageFailure(stage, ex) =>
-            errors.append(
-              new SparkException(s"Failed to materialize query stage: ${stage.treeString}", ex))
+            errors.append(ex)
         }
 
         // In case of errors, we cancel all running stages and throw exception.
