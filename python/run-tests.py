@@ -99,7 +99,7 @@ def run_individual_python_test(target_dir, test_name, pyspark_python, failed_tes
     LOGGER.info("Starting test(%s): %s", pyspark_python, test_name)
     start_time = time.time()
     # This line must come before the try block, file shouldn't be closed before 'worker' is done
-    per_test_output = tempfile.TemporaryFile()
+    per_test_output = tempfile.TemporaryFile(mode='w+')
     try:
         process = subprocess.Popen(
             [os.path.join(SPARK_HOME, "bin/pyspark"), test_name],
