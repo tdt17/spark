@@ -28,14 +28,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN mkdir -p /usr/share/man/man1 \
   && apt-get update \
   && apt-get install -y \
-    git python2 \
+    git python3 \
     locales sudo openssh-client ca-certificates tar gzip parallel \
     net-tools netcat unzip zip bzip2 gnupg curl wget \
     openjdk-8-jdk rsync pandoc pandoc-citeproc flake8 tzdata \
   && rm -rf /var/lib/apt/lists/*
 
 # Make python command default to python2
-RUN sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 0
+RUN sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 0
 
 # If you update java, make sure this aligns
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
