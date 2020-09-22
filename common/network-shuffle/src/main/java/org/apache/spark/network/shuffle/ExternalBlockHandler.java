@@ -230,8 +230,6 @@ public class ExternalBlockHandler extends RpcHandler {
     // Number of active connections to the shuffle service
     private Counter activeConnections = new Counter();
     // Number of exceptions caught in connections to the shuffle service
-    private Counter registeredConnections = new Counter();
-    // Number of exceptions caught in connections to the shuffle service
     private Counter caughtExceptions = new Counter();
 
     public ShuffleMetrics() {
@@ -242,7 +240,6 @@ public class ExternalBlockHandler extends RpcHandler {
       allMetrics.put("registeredExecutorsSize",
                      (Gauge<Integer>) () -> blockManager.getRegisteredExecutorsSize());
       allMetrics.put("numActiveConnections", activeConnections);
-      allMetrics.put("numRegisteredConnections", registeredConnections);
       allMetrics.put("numCaughtExceptions", caughtExceptions);
     }
 
