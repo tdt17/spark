@@ -59,7 +59,7 @@ if __name__ == '__main__':
             subprocess_check_output(
                 [python_exec, "-c", "import platform; print(platform.python_version())"],
                 universal_newlines=True).strip()
-            for python_exec in python_executables_for_this_run
+            for python_exec in python_executables_for_run
         ]
         LOGGER.info("Running python packaging tests for following python versions using conda: %s",
                     python_exact_versions)
