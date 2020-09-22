@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path
 import org.scalactic.source.Position
 import org.scalatest.{BeforeAndAfterAll, Suite, Tag}
 import org.scalatest.{BeforeAndAfterAll, Suite}
-import org.scalatest.Tag
 import org.scalatest.concurrent.Eventually
 
 import org.apache.spark.SparkFunSuite
@@ -110,8 +109,8 @@ private[sql] trait SQLTestUtils extends SparkFunSuite with SQLTestUtilsBase with
    * System.out or System.err. Otherwise, ConsoleAppender will still output to the console even if
    * we change System.out and System.err.
    */
-  protected def testQuietly(name: String, tags: Tag*)(f: => Unit): Unit = {
-    test(name, tags: _*) {
+  protected def testQuietly(name: String)(f: => Unit): Unit = {
+    test(name) {
       quietly {
         f
       }

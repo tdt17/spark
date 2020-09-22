@@ -42,7 +42,6 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types._
-import org.apache.spark.tags.Flaky
 
 
 class FileBasedDataSourceSuite extends QueryTest
@@ -179,11 +178,7 @@ class FileBasedDataSourceSuite extends QueryTest
   }
 
   allFileBasedDataSources.foreach { format =>
-    val tags = format match {
-      case "orc" => List(Flaky)
-      case _ => List()
-    }
-    testQuietly(s"Enabling/disabling ignoreMissingFiles using $format", tags: _*) {
+    testQuietly(s"Enabling/disabling ignoreMissingFiles using $format") {
       def testIgnoreMissingFiles(): Unit = {
         withTempDir { dir =>
           val basePath = dir.getCanonicalPath
