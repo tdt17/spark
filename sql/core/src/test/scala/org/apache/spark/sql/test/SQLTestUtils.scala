@@ -29,7 +29,6 @@ import scala.util.control.NonFatal
 import org.apache.hadoop.fs.Path
 import org.scalactic.source.Position
 import org.scalatest.{BeforeAndAfterAll, Suite, Tag}
-import org.scalatest.{BeforeAndAfterAll, Suite}
 import org.scalatest.concurrent.Eventually
 
 import org.apache.spark.SparkFunSuite

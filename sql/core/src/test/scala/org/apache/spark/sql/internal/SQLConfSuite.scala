@@ -275,7 +275,7 @@ class SQLConfSuite extends QueryTest with SharedSparkSession {
 
     // check default value
     assert(spark.sessionState.conf.parquetOutputTimestampType ==
-      SQLConf.ParquetOutputTimestampType.TIMESTAMP_MICROS)
+      SQLConf.ParquetOutputTimestampType.INT96)
 
     // TODO(@jcasale): chase down what we need to change to respect this break
     // PARQUET_INT64_AS_TIMESTAMP_MILLIS should be respected.

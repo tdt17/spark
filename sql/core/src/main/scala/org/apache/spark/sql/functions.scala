@@ -835,32 +835,6 @@ object functions {
   //////////////////////////////////////////////////////////////////////////////////////////////
   // Window functions
   //////////////////////////////////////////////////////////////////////////////////////////////
-  /**
-   * This function has been deprecated in Spark 2.4. See SPARK-25842 for more information.
-   *
-   * @group window_funcs
-   * @since 2.3.0
-   */
-  @deprecated("Use Window.unboundedPreceding", "2.4.0")
-  def unboundedPreceding(): Column = Column(UnboundedPreceding)
-
-  /**
-   * This function has been deprecated in Spark 2.4. See SPARK-25842 for more information.
-   *
-   * @group window_funcs
-   * @since 2.3.0
-   */
-  @deprecated("Use Window.unboundedFollowing", "2.4.0")
-  def unboundedFollowing(): Column = Column(UnboundedFollowing)
-
-  /**
-   * This function has been deprecated in Spark 2.4. See SPARK-25842 for more information.
-   *
-   * @group window_funcs
-   * @since 2.3.0
-   */
-  @deprecated("Use Window.currentRow", "2.4.0")
-  def currentRow(): Column = Column(CurrentRow)
 
   /**
    * Window function: returns the cumulative distribution of values within a window partition,
@@ -4847,6 +4821,13 @@ object functions {
    * the caller must specify the output data type, and there is no automatic input type coercion.
    * By default the returned UDF is deterministic. To change it to nondeterministic, call the
    * API `UserDefinedFunction.asNondeterministic()`.
+   *
+   * Note that, although the Scala closure can have primitive-type function argument, it doesn't
+   * work well with null values. Because the Scala closure is passed in as Any type, there is no
+   * type information for the function arguments. Without the type information, Spark may blindly
+   * pass null to the Scala closure with primitive-type argument, and the closure will see the
+   * default value of the Java type for the null argument, e.g. `udf((x: Int) => x, IntegerType)`,
+   * the result is 0 for null input.
    *
    * @param f  A closure in Scala
    * @param dataType  The output data type of the UDF

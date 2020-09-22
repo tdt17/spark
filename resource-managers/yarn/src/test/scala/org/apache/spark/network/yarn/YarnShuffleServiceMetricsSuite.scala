@@ -39,15 +39,15 @@ class YarnShuffleServiceMetricsSuite extends SparkFunSuite with Matchers {
     val allMetrics = Set(
       "openBlockRequestLatencyMillis", "registerExecutorRequestLatencyMillis",
       "blockTransferRateBytes", "registeredExecutorsSize", "numActiveConnections",
-      "numRegisteredConnections", "numCaughtExceptions")
+      "numCaughtExceptions")
 
     metrics.getMetrics.keySet().asScala should be (allMetrics)
   }
 
   // these three metrics have the same effect on the collector
   for (testname <- Seq("openBlockRequestLatencyMillis",
-    "registerExecutorRequestLatencyMillis",
-    "blockTransferRateBytes")) {
+      "registerExecutorRequestLatencyMillis",
+      "blockTransferRateBytes")) {
     test(s"$testname - collector receives correct types") {
       val builder = mock(classOf[MetricsRecordBuilder])
       when(builder.addCounter(any(), anyLong())).thenReturn(builder)
