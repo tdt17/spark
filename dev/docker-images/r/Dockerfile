@@ -24,6 +24,7 @@ RUN $CONDA_BIN install --yes --channel conda-forge \
 
 # Install qpdf (used for SparkR documentation, required in R tests)
 USER root
+RUN apt-get update && apt-get install qpdf
 RUN apt-get update && apt-get install pandoc
 USER circleci
 
