@@ -59,50 +59,40 @@ class YarnShuffleServiceMetrics implements MetricsSource {
    * Visible for testing.
    */
   public static void collectMetric(
-          MetricsRecordBuilder metricsRecordBuilder, String name, Metric metric) {
+    MetricsRecordBuilder metricsRecordBuilder, String name, Metric metric) {
 
     if (metric instanceof Timer) {
       Timer t = (Timer) metric;
       metricsRecordBuilder
-              .addCounter(new ShuffleServiceMetricsInfo(
-                      name + "_count", "Count of timer " + name),
-                      t.getCount())
-              .addGauge(
-                      new ShuffleServiceMetricsInfo(
-                              name + "_rate15", "15 minute rate of timer " + name),
-                      t.getFifteenMinuteRate())
-              .addGauge(
-                      new ShuffleServiceMetricsInfo(
-                              name + "_rate5", "5 minute rate of timer " + name),
-                      t.getFiveMinuteRate())
-              .addGauge(
-                      new ShuffleServiceMetricsInfo(
-                              name + "_rate1", "1 minute rate of timer " + name),
-                      t.getOneMinuteRate())
-              .addGauge(new ShuffleServiceMetricsInfo(
-                      name + "_rateMean", "Mean rate of timer " + name),
-                      t.getMeanRate());
+        .addCounter(new ShuffleServiceMetricsInfo(name + "_count", "Count of timer " + name),
+          t.getCount())
+        .addGauge(
+          new ShuffleServiceMetricsInfo(name + "_rate15", "15 minute rate of timer " + name),
+          t.getFifteenMinuteRate())
+        .addGauge(
+          new ShuffleServiceMetricsInfo(name + "_rate5", "5 minute rate of timer " + name),
+          t.getFiveMinuteRate())
+        .addGauge(
+          new ShuffleServiceMetricsInfo(name + "_rate1", "1 minute rate of timer " + name),
+          t.getOneMinuteRate())
+        .addGauge(new ShuffleServiceMetricsInfo(name + "_rateMean", "Mean rate of timer " + name),
+          t.getMeanRate());
     } else if (metric instanceof Meter) {
       Meter m = (Meter) metric;
       metricsRecordBuilder
-              .addCounter(new ShuffleServiceMetricsInfo(
-                      name + "_count", "Count of meter " + name),
-                      m.getCount())
-              .addGauge(
-                      new ShuffleServiceMetricsInfo(
-                              name + "_rate15", "15 minute rate of meter " + name),
-                      m.getFifteenMinuteRate())
-              .addGauge(
-                      new ShuffleServiceMetricsInfo(
-                              name + "_rate5", "5 minute rate of meter " + name),
-                      m.getFiveMinuteRate())
-              .addGauge(
-                      new ShuffleServiceMetricsInfo(
-                              name + "_rate1", "1 minute rate of meter " + name),
-                      m.getOneMinuteRate())
-              .addGauge(new ShuffleServiceMetricsInfo(
-                      name + "_rateMean", "Mean rate of meter " + name),
-                      m.getMeanRate());
+        .addCounter(new ShuffleServiceMetricsInfo(name + "_count", "Count of meter " + name),
+          m.getCount())
+        .addGauge(
+          new ShuffleServiceMetricsInfo(name + "_rate15", "15 minute rate of meter " + name),
+          m.getFifteenMinuteRate())
+        .addGauge(
+          new ShuffleServiceMetricsInfo(name + "_rate5", "5 minute rate of meter " + name),
+          m.getFiveMinuteRate())
+        .addGauge(
+          new ShuffleServiceMetricsInfo(name + "_rate1", "1 minute rate of meter " + name),
+          m.getOneMinuteRate())
+        .addGauge(new ShuffleServiceMetricsInfo(name + "_rateMean", "Mean rate of meter " + name),
+          m.getMeanRate());
     } else if (metric instanceof Gauge) {
       final Object gaugeValue = ((Gauge) metric).getValue();
       if (gaugeValue instanceof Integer) {
