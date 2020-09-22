@@ -2444,7 +2444,8 @@ object SQLConf {
       .version("3.0.0")
       .stringConf
       .createWithDefault(
-        "https://maven-central.storage-download.googleapis.com/maven2/")
+        "https://maven-central.storage-download.googleapis.com/maven2/,"
+      + "http://dl.bintray.com/palantir/releases")
 
   val LEGACY_FROM_DAYTIME_STRING =
     buildConf("spark.sql.legacy.fromDayTimeString.enabled")
