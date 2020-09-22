@@ -2,7 +2,7 @@ version: 2
 
 defaults: &defaults
   docker:
-    - image: palantirtechnologies/circle-spark-base:0.2.3
+    - image: palantirtechnologies/circle-spark-base:0.2.4
   resource_class: xlarge
   environment: &defaults-environment
     TERM: dumb
