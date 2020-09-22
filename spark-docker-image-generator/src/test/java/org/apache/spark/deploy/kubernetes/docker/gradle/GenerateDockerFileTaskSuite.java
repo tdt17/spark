@@ -92,7 +92,7 @@ public final class GenerateDockerFileTaskSuite {
             List<String> expectedFileLines = expectedDockerFileBuffered
                     .lines()
                     .collect(Collectors.toList());
-            Assertions.assertThat(writtenLines).isEqualTo(expectedFileLines);
+            Assertions.assertThat(writtenLines).containsExactlyElementsOf(expectedFileLines);
         }
     }
 
