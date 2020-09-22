@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,6 +17,7 @@
 # limitations under the License.
 #
 
+from __future__ import print_function
 import itertools
 from argparse import ArgumentParser
 import os
@@ -267,7 +268,7 @@ def exec_sbt(sbt_args=()):
     echo_proc.wait()
     for line in iter(sbt_proc.stdout.readline, b''):
         if not sbt_output_filter.match(line):
-            print(line.decode('utf-8'), end='')
+            print(line, end='')
     retcode = sbt_proc.wait()
 
     if retcode != 0:
