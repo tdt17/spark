@@ -1176,11 +1176,23 @@ private[spark] object SparkSubmitUtils {
   def resolveDependencyPaths(
       artifacts: Array[AnyRef],
       cacheDirectory: File): String = {
-    artifacts.map { artifactInfo =>
+    val a = artifacts.map { artifactInfo =>
       val artifact = artifactInfo.asInstanceOf[Artifact].getModuleRevisionId
-      cacheDirectory.getAbsolutePath + File.separator +
-        s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}.jar"
+      artifactInfo match {
+        case mdArtifact: MDArtifact =>
+          if (mdArtifact.getType.equals("test-jar")) {
+            cacheDirectory.getAbsolutePath + File.separator +
+              s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}-tests.jar"
+          } else {
+            cacheDirectory.getAbsolutePath + File.separator +
+              s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}.jar"
+          }
+
+        case _ => cacheDirectory.getAbsolutePath + File.separator +
+          s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}.jar"
+      }
     }.mkString(",")
+    a
   }
 
   /** Adds the given maven coordinates to Ivy's module descriptor. */
