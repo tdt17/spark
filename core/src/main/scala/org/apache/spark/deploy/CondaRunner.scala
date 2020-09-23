@@ -21,7 +21,6 @@ import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicReference
 
 import org.apache.spark.SparkConf
-import org.apache.spark.SparkContext
 import org.apache.spark.api.conda.{CondaBootstrapMode, CondaEnvironment, CondaEnvironmentManager}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._

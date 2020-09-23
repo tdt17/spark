@@ -19,7 +19,7 @@ package org.apache.spark.deploy
 
 import java.io.File
 import java.io.OutputStream
-import java.net.{InetAddress, URI}
+import java.net.URI
 import java.nio.file.Files
 
 import scala.collection.JavaConverters._
@@ -50,7 +50,6 @@ object PythonRunner extends CondaRunner with Logging {
     val pyFiles = args(1)
     val otherArgs = args.slice(2, args.length)
     val sparkConf = new SparkConf()
-    val secret = Utils.createSecret(sparkConf)
     val presetPythonExec = Provenance.fromConfOpt(sparkConf, PYSPARK_DRIVER_PYTHON)
       .orElse(Provenance.fromConfOpt(sparkConf, PYSPARK_PYTHON))
       .orElse(Provenance.fromEnv("PYSPARK_DRIVER_PYTHON"))
