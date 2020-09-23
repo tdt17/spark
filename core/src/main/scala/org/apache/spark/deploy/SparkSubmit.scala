@@ -1176,7 +1176,7 @@ private[spark] object SparkSubmitUtils {
   def resolveDependencyPaths(
       artifacts: Array[AnyRef],
       cacheDirectory: File): String = {
-    val a = artifacts.map { artifactInfo =>
+    artifacts.map { artifactInfo =>
       val artifact = artifactInfo.asInstanceOf[Artifact].getModuleRevisionId
       artifactInfo match {
         case mdArtifact: MDArtifact =>
@@ -1191,7 +1191,6 @@ private[spark] object SparkSubmitUtils {
           s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}.jar"
       }
     }.mkString(",")
-    a
   }
 
   /** Adds the given maven coordinates to Ivy's module descriptor. */
