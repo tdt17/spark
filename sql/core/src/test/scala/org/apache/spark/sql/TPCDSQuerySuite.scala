@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql
 
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.internal.SQLConf
 
@@ -97,4 +98,9 @@ class TPCDSQuerySuite extends BenchmarkQueryTest with TPCDSSchema {
       checkGeneratedCode(plan, !blackListForMethodCodeSizeCheck.contains(testName))
     }
   }
+}
+
+class TPCDSQueryANSISuite extends TPCDSQuerySuite {
+  override protected def sparkConf: SparkConf =
+    super.sparkConf.set(SQLConf.ANSI_ENABLED, true)
 }
