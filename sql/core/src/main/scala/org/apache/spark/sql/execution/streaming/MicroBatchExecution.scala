@@ -318,6 +318,17 @@ class MicroBatchExecution(
               committedOffsets ++= availableOffsets
               watermarkTracker.setWatermark(
                 math.max(watermarkTracker.currentWatermark, commitMetadata.nextBatchWatermarkMs))
+            } else if (latestCommittedBatchId == latestBatchId - 1) {
+              availableOffsets.foreach {
+                case (source: Source, end: Offset) =>
+                  val start = committedOffsets.get(source).map(_.asInstanceOf[Offset])
+                  if (start.map(_ == end).getOrElse(true)) {
+                    source.getBatch(start, end)
+                  }
+                case nonV1Tuple =>
+                  // The V2 API does not have the same edge case requiring getBatch to be called
+                  // here, so we do nothing here.
+              }
             } else if (latestCommittedBatchId < latestBatchId - 1) {
               logWarning(s"Batch completion log latest batch id is " +
                 s"${latestCommittedBatchId}, which is not trailing " +
@@ -566,8 +577,7 @@ class MicroBatchExecution(
     val nextBatch =
       new Dataset(lastExecution, RowEncoder(lastExecution.analyzed.schema))
 
-    val batchSinkProgress: Option[StreamWriterCommitProgress] =
-      reportTimeTaken("addBatch") {
+    val batchSinkProgress: Option[StreamWriterCommitProgress] = reportTimeTaken("addBatch") {
       SQLExecution.withNewExecutionId(lastExecution) {
         sink match {
           case s: Sink => s.addBatch(currentBatchId, nextBatch)

@@ -249,31 +249,14 @@ case class MapPartitionsInRWithArrowExec(
       // 7. Each row from each batch
       //
       // Note that, unlike Python vectorization implementation, R side sends Arrow formatted
-      // binary in a batch due to the limitation of R API. See also ARROW-4512.
+      // binary in a batch due to the limitati7n of R API. See also ARROW-4512.
       val columnarBatchIter = runner.compute(batchIter, -1)
       val outputProject = UnsafeProjection.create(output, output)
-      new Iterator[InternalRow] {
-
-        private var currentIter = if (columnarBatchIter.hasNext) {
-          val batch = columnarBatchIter.next()
-          val actualDataTypes = (0 until batch.numCols()).map(i => batch.column(i).dataType())
-          assert(outputTypes == actualDataTypes, "Invalid schema from dapply(): " +
-            s"expected ${outputTypes.mkString(", ")}, got ${actualDataTypes.mkString(", ")}")
-          batch.rowIterator.asScala
-        } else {
-          Iterator.empty
-        }
-
-        override def hasNext: Boolean = currentIter.hasNext || {
-          if (columnarBatchIter.hasNext) {
-            currentIter = columnarBatchIter.next().rowIterator.asScala
-            hasNext
-          } else {
-            false
-          }
-        }
-
-        override def next(): InternalRow = currentIter.next()
+      columnarBatchIter.flatMap { batch =>
+        val actualDataTypes = (0 until batch.numCols()).map(i => batch.column(i).dataType())
+        assert(outputTypes == actualDataTypes, "Invalid schema from dapply(): " +
+          s"expected ${outputTypes.mkString(", ")}, got ${actualDataTypes.mkString(", ")}")
+        batch.rowIterator.asScala
       }.map(outputProject)
     }
   }
@@ -477,11 +460,7 @@ case class FlatMapGroupsInRExec(
    */
   val condaInstructions: Option[CondaSetupInstructions] = sparkContext.buildCondaInstructions()
 
-  override def output: Seq[Attribute] = outputObjAttr :: Nil
-
   override def outputPartitioning: Partitioning = child.outputPartitioning
-
-  override def producedAttributes: AttributeSet = AttributeSet(outputObjAttr)
 
   override def requiredChildDistribution: Seq[Distribution] =
     if (groupingAttributes.isEmpty) {

@@ -93,17 +93,5 @@ case class FlatMapGroupsInPandasExec(
 
       executePython(data, output, runner)
     }}
-// TODO(jcasale) this was cherry-picked in in https://github.com/palantir/spark/pull/582
-// Determine if this is necessary
-//      val unsafeProj = UnsafeProjection.create(output, output)
-//
-//      columnarBatchIter.flatMap { batch =>
-//        // Grouped Map UDF returns a StructType column in ColumnarBatch, select the children here
-//        val structVector = batch.column(0).asInstanceOf[ArrowColumnVector]
-//        val outputVectors = output.indices.map(structVector.getChild)
-//        val flattenedBatch = new ColumnarBatch(outputVectors.toArray)
-//        flattenedBatch.setNumRows(batch.numRows())
-//        flattenedBatch.rowIterator.asScala
-//      }.map(unsafeProj)
-    }
+  }
 }
