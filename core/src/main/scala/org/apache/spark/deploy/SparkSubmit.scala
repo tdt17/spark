@@ -1187,7 +1187,6 @@ private[spark] object SparkSubmitUtils {
             cacheDirectory.getAbsolutePath + File.separator +
               s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}.jar"
           }
-
         case _ => cacheDirectory.getAbsolutePath + File.separator +
           s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}.jar"
       }
