@@ -678,12 +678,12 @@ The current supported minimum version is 0.15.1; however, this might change betw
 Arrow optimization is available when converting a Spark DataFrame to an R DataFrame using the call `collect(spark_df)`,
 when creating a Spark DataFrame from an R DataFrame with `createDataFrame(r_df)`, when applying an R native function to each partition
 via `dapply(...)` and when applying an R native function to grouped data via `gapply(...)`.
-To use Arrow when executing these calls, users need to first set the Spark configuration ‘spark.sql.execution.arrow.sparkr.enabled’
-to ‘true’. This is disabled by default.
+To use Arrow when executing these, users need to set the Spark configuration ‘spark.sql.execution.arrow.sparkr.enabled’
+to ‘true’ first. This is disabled by default.
 
-In addition, optimizations enabled by ‘spark.sql.execution.arrow.sparkr.enabled’ could fallback automatically to non-Arrow optimization
-implementation if an error occurs before the actual computation within Spark during converting a Spark DataFrame to/from an R
-DataFrame.
+Whether the optimization is enabled or not, SparkR produces the same results. In addition, the conversion
+between Spark DataFrame and R DataFrame falls back automatically to non-Arrow optimization implementation
+when the optimization fails for any reasons before the actual computation.
 
 <div data-lang="r" markdown="1">
 {% highlight r %}
