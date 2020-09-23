@@ -38,7 +38,8 @@ if __name__ == '__main__':
     if total_circle_nodes > 0:
         total_py_executables = len(all_python_executables)
         assert total_py_executables == total_circle_nodes, \
-            f"CircleCI parallelism ('CIRCLE_NODE_TOTAL') should be f{total_py_executables} but was: {total_circle_nodes}"
+            f"CircleCI parallelism ('CIRCLE_NODE_TOTAL') should be " \
+            f"f{total_py_executables} but was: {total_circle_nodes}"
 
         assert "CIRCLE_NODE_INDEX" in os.environ, "CIRCLE_NODE_INDEX not set"
         circle_node_index = int(os.getenv("CIRCLE_NODE_INDEX"))
