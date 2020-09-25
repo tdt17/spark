@@ -113,12 +113,12 @@ private class ShuffleStatus(numPartitions: Int) {
    * Register a map output. If there is already a registered location for the map output then it
    * will be replaced by the new location.
    */
-  def addMapOutput(mapId: Int, status: MapStatus): Unit = synchronized {
-    if (mapStatuses(mapId) == null) {
+  def addMapOutput(mapIndex: Int, status: MapStatus): Unit = withWriteLock {
+    if (mapStatuses(mapIndex) == null) {
       _numAvailableOutputs += 1
       invalidateSerializedMapOutputStatusCache()
     }
-    mapStatuses(mapId) = status
+    mapStatuses(mapIndex) = status
   }
 
   /**
@@ -126,10 +126,10 @@ private class ShuffleStatus(numPartitions: Int) {
    * This is a no-op if there is no registered map output or if the registered output is from a
    * different block manager.
    */
-  def removeMapOutput(mapId: Int, bmAddress: BlockManagerId): Unit = synchronized {
-    if (mapStatuses(mapId) != null && mapStatuses(mapId).location == bmAddress) {
+  def removeMapOutput(mapIndex: Int, bmAddress: BlockManagerId): Unit = withWriteLock {
+    if (mapStatuses(mapIndex) != null && mapStatuses(mapIndex).location == bmAddress) {
       _numAvailableOutputs -= 1
-      mapStatuses(mapId) = null
+      mapStatuses(mapIndex) = null
       invalidateSerializedMapOutputStatusCache()
     }
   }
@@ -155,11 +155,11 @@ private class ShuffleStatus(numPartitions: Int) {
    * Removes all shuffle outputs which satisfies the filter. Note that this will also
    * remove outputs which are served by an external shuffle server (if one exists).
    */
-  def removeOutputsByFilter(f: (BlockManagerId) => Boolean): Unit = synchronized {
-    for (mapId <- mapStatuses.indices) {
-      if (mapStatuses(mapId) != null && f(mapStatuses(mapId).location)) {
+  def removeOutputsByFilter(f: BlockManagerId => Boolean): Unit = withWriteLock {
+    for (mapIndex <- mapStatuses.indices) {
+      if (mapStatuses(mapIndex) != null && f(mapStatuses(mapIndex).location)) {
         _numAvailableOutputs -= 1
-        mapStatuses(mapId) = null
+        mapStatuses(mapIndex) = null
         invalidateSerializedMapOutputStatusCache()
       }
     }

@@ -84,8 +84,10 @@ class SparkContext(config: SparkConf) extends SafeLogging {
   // The call site where this SparkContext was constructed.
   private val creationSite: CallSite = Utils.getCallSite()
 
-  // In order to prevent SparkContext from being created in executors.
-  SparkContext.assertOnDriver()
+  if (!config.get(EXECUTOR_ALLOW_SPARK_CONTEXT)) {
+    // In order to prevent SparkContext from being created in executors.
+    SparkContext.assertOnDriver()
+  }
 
   // In order to prevent multiple SparkContexts from being active at the same time, mark this
   // context as having started construction.
@@ -1608,7 +1610,8 @@ class SparkContext(config: SparkConf) extends SafeLogging {
   }
 
   /**
-   * Get the max number of tasks that can be concurrent launched currently.
+   * Get the max number of tasks that can be concurrent launched based on the resources
+   * could be used, even if some of them are being used at the moment.
    * Note that please don't cache the value returned by this method, because the number can change
    * due to add/remove executors.
    *
@@ -1863,7 +1866,7 @@ class SparkContext(config: SparkConf) extends SafeLogging {
           if (!fs.exists(hadoopPath)) {
             throw new FileNotFoundException(s"Jar ${path} not found")
           }
-          if (fs.isDirectory(hadoopPath)) {
+          if (fs.getFileStatus(hadoopPath).isDirectory) {
             throw new IllegalArgumentException(
               s"Directory ${path} is not allowed for addJar")
           }
@@ -2829,8 +2832,9 @@ object SparkContext extends SafeLogging {
       }
       // some cluster managers don't set the EXECUTOR_CORES config by default (standalone
       // and mesos coarse grained), so we can't rely on that config for those.
-      val shouldCheckExecCores = executorCores.isDefined || sc.conf.contains(EXECUTOR_CORES) ||
+      var shouldCheckExecCores = executorCores.isDefined || sc.conf.contains(EXECUTOR_CORES) ||
         (master.equalsIgnoreCase("yarn") || master.startsWith("k8s"))
+      shouldCheckExecCores &= !sc.conf.get(SKIP_VALIDATE_CORES_TESTING)
 
       // Number of cores per executor must meet at least one task requirement.
       if (shouldCheckExecCores && execCores < taskCores) {

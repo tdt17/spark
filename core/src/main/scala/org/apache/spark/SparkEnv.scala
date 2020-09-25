@@ -156,12 +156,6 @@ class SparkEnv (
   }
 
   private[spark]
-// TODO(@jcasale) wtf is going on here?
-// Also on the executor, crash if there is a conda env and PYSPARK_PYTHON is set.
-// vs
-// [SPARK-29291]
-//  def destroyPythonWorker(pythonExec: String,
-//      envVars: Map[String, String], worker: Socket): Unit = {
   def destroyPythonWorker(pythonExec: Option[String], envVars: Map[String, String],
                           condaInstructions: Option[CondaSetupInstructions], worker: Socket) {
     synchronized {
@@ -173,9 +167,6 @@ class SparkEnv (
   private[spark]
   def releasePythonWorker(pythonExec: Option[String], envVars: Map[String, String],
                           condaInstructions: Option[CondaSetupInstructions], worker: Socket) {
-//  TODO(@jcasale)
-//  def releasePythonWorker(pythonExec: String,
-//      envVars: Map[String, String], worker: Socket): Unit = {
     synchronized {
       val key = PythonWorkerKey(pythonExec, envVars, condaInstructions)
       pythonWorkers.get(key).foreach(_.releaseWorker(worker))

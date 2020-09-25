@@ -45,8 +45,8 @@ import org.apache.spark.util.{Clock, SystemClock, ThreadUtils, Utils}
  * executors that could run all current running and pending tasks at once.
  *
  * Increasing the target number of executors happens in response to backlogged tasks waiting to be
- * scheduled. If the scheduler queue is not drained in N seconds, then new executors are added. If
- * the queue persists for another M seconds, then more executors are added and so on. The number
+ * scheduled. If the scheduler queue is not drained in M seconds, then new executors are added. If
+ * the queue persists for another N seconds, then more executors are added and so on. The number
  * added in each round increases exponentially from the previous round until an upper bound has been
  * reached. The upper bound is based both on a configured property and on the current number of
  * running and pending tasks, as described above.
@@ -113,11 +113,6 @@ private[spark] class ExecutorAllocationManager(
   // Same as above, but used only after `schedulerBacklogTimeoutS` is exceeded
   private val sustainedSchedulerBacklogTimeoutS =
     conf.get(DYN_ALLOCATION_SUSTAINED_SCHEDULER_BACKLOG_TIMEOUT)
-
-  // How long an executor must be idle for before it is removed (seconds)
-  private val executorIdleTimeoutS = conf.get(DYN_ALLOCATION_EXECUTOR_IDLE_TIMEOUT)
-
-  private val cachedExecutorIdleTimeoutS = conf.get(DYN_ALLOCATION_CACHED_EXECUTOR_IDLE_TIMEOUT)
 
   // During testing, the methods to actually kill and add executors are mocked out
   private val testing = conf.get(DYN_ALLOCATION_TESTING)
@@ -200,7 +195,6 @@ private[spark] class ExecutorAllocationManager(
       throw new SparkException(
         s"s${DYN_ALLOCATION_SUSTAINED_SCHEDULER_BACKLOG_TIMEOUT.key} must be > 0!")
     }
-
     if (!conf.get(config.SHUFFLE_SERVICE_ENABLED)) {
       if (conf.get(config.DYN_ALLOCATION_SHUFFLE_TRACKING_ENABLED)) {
         logWarning("Dynamic allocation without a shuffle service is an experimental feature.")
@@ -505,45 +499,6 @@ private[spark] class ExecutorAllocationManager(
   private case class StageAttempt(stageId: Int, stageAttemptId: Int) {
     override def toString: String = s"Stage $stageId (Attempt $stageAttemptId)"
   }
-//  /**
-//   * Callback invoked when the specified executor is no longer running any tasks.
-//   * This sets a time in the future that decides when this executor should be removed if
-//   * the executor is not already marked as idle.
-//   */
-//  private def onExecutorIdle(executorId: String): Unit = synchronized {
-//    if (executorIds.contains(executorId)) {
-//      if (!removeTimes.contains(executorId) && !executorsPendingToRemove.contains(executorId)) {
-//        // Note that it is not necessary to query the executors since all the cached
-//        // blocks we are concerned with are reported to the driver. Note that this
-//        // does not include broadcast blocks.
-//        val hasCachedBlocks = blockManagerMaster.hasCachedBlocks(executorId)
-//        val now = clock.getTimeMillis()
-//        val timeout = {
-//          if (hasCachedBlocks) {
-//            // Use a different timeout if the executor has cached blocks.
-//            now + cachedExecutorIdleTimeoutS * 1000
-//          } else {
-//            now + executorIdleTimeoutS * 1000
-//          }
-//        }
-//        val realTimeout = if (timeout <= 0) Long.MaxValue else timeout // overflow
-//        removeTimes(executorId) = realTimeout
-//        logDebug(s"Starting idle timer for $executorId because there are no more tasks " +
-//          s"scheduled to run on the executor (to expire in ${(realTimeout - now)/1000} seconds)")
-//      }
-//    } else {
-//      logWarning(s"Attempted to mark unknown executor $executorId idle")
-//    }
-//  }
-//
-//  /**
-//   * Callback invoked when the specified executor is now running a task.
-//   * This resets all variables used for removing this executor.
-//   */
-//  private def onExecutorBusy(executorId: String): Unit = synchronized {
-//    logDebug(s"Clearing idle timer for $executorId because it is now running a task")
-//    removeTimes.remove(executorId)
-//  }
 
   /**
    * A listener that notifies the given allocation manager of when to add and remove executors.
@@ -623,12 +578,6 @@ private[spark] class ExecutorAllocationManager(
         if (stageAttemptToNumTasks.isEmpty && stageAttemptToNumSpeculativeTasks.isEmpty) {
           allocationManager.onSchedulerQueueEmpty()
         }
-
-//         TODO(@jcasale) do we need this?
-//         Trigger the callbacks for idle executors again to clean up executors
-//         which we were keeping around only because they held active shuffle blocks.
-//        logDebug("Checking for idle executors at end of stage")
-//        allocationManager.checkForIdleExecutors()
       }
     }
 
