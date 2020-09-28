@@ -118,13 +118,9 @@ class ParquetInteroperabilitySuite extends ParquetCompatibilityTest with SharedS
         "2006-06-06 06:06:06"
       ).map { s => java.sql.Timestamp.valueOf(s) }
       import testImplicits._
-      withSQLConf(
-        (SQLConf.PARQUET_OUTPUT_TIMESTAMP_TYPE.key,
-          SQLConf.ParquetOutputTimestampType.INT96.toString)) {
-        // match the column names of the file from impala
-        val df = spark.createDataset(ts).toDF().repartition(1).withColumnRenamed("value", "ts")
-        df.write.parquet(tableDir.getAbsolutePath)
-      }
+      // match the column names of the file from impala
+      val df = spark.createDataset(ts).toDF().repartition(1).withColumnRenamed("value", "ts")
+      df.write.parquet(tableDir.getAbsolutePath)
       FileUtils.copyFile(new File(impalaPath), new File(tableDir, "part-00001.parq"))
 
       Seq(false, true).foreach { int96TimestampConversion =>
