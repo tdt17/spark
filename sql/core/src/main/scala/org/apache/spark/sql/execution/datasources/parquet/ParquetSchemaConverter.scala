@@ -306,8 +306,7 @@ class ParquetToSparkSchemaConverter(
 class SparkToParquetSchemaConverter(
     writeLegacyParquetFormat: Boolean = SQLConf.PARQUET_WRITE_LEGACY_FORMAT.defaultValue.get,
     outputTimestampType: SQLConf.ParquetOutputTimestampType.Value =
-      SQLConf.ParquetOutputTimestampType.withName(
-        SQLConf.PARQUET_OUTPUT_TIMESTAMP_TYPE.defaultValueString)) {
+      SQLConf.ParquetOutputTimestampType.INT96) {
 
   def this(conf: SQLConf) = this(
     writeLegacyParquetFormat = conf.writeLegacyParquetFormat,
