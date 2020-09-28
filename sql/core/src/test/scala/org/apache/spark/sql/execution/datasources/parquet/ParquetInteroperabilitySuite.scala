@@ -22,7 +22,6 @@ import java.time.ZoneOffset
 
 import org.apache.commons.io.FileUtils
 import org.apache.hadoop.fs.{FileSystem, Path, PathFilter}
-import org.apache.parquet.CorruptStatistics
 import org.apache.parquet.format.converter.ParquetMetadataConverter.NO_FILTER
 import org.apache.parquet.hadoop.ParquetFileReader
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
@@ -186,17 +185,15 @@ class ParquetInteroperabilitySuite extends ParquetCompatibilityTest with SharedS
                 assert(typeName === PrimitiveTypeName.INT96)
                 val oneBlockMeta = oneFooter.getBlocks().get(0)
                 val oneBlockColumnMeta = oneBlockMeta.getColumns().get(0)
-                val columnStats = oneBlockColumnMeta.getStatistics
                 // This is the important assert.  Column stats are written, but they are ignored
                 // when the data is read back as mentioned above, b/c int96 is unsigned.  This
                 // assert makes sure this holds even if we change parquet versions (if eg. there
                 // were ever statistics even on unsigned columns).
-                // assert(!oneBlockColumnMeta.getStatistics.hasNonNullValue)
 
                 // Note: This is not true in palantir/parquet-mr and statistics are always returned
                 // and they are always unsigned.
                 assert(oneFooter.getFileMetaData.getCreatedBy.contains("impala") ^
-                  columnStats.hasNonNullValue)
+                  oneBlockColumnMeta.getStatistics.hasNonNullValue)
               }
 
               // These queries should return the entire dataset with the conversion applied,
