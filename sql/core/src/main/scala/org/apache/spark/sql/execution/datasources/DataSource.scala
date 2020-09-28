@@ -402,7 +402,6 @@ case class DataSource(
 
       // This is a non-streaming file based datasource.
       case (format: FileFormat, _) =>
-        // TODO(rshkv): Consider if diffing here from upstream is necessary
         val useCatalogFileIndex = sparkSession.sqlContext.conf.manageFilesourcePartitions &&
           catalogTable.isDefined && catalogTable.get.tracksPartitionsInCatalog &&
           catalogTable.get.partitionColumnNames.nonEmpty
