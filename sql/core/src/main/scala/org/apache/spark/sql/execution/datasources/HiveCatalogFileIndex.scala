@@ -81,11 +81,16 @@ class HiveCatalogFileIndex(
       }
       val partitionSpec = PartitionSpec(partitionSchema, partitions)
       val timeNs = System.nanoTime() - startTime
-      new PrunedInMemoryFileIndex(
-        sparkSession, new Path(baseLocation.get), fileStatusCache, partitionSpec, Option(timeNs))
+      new InMemoryFileIndex(sparkSession,
+        rootPathsSpecified = partitionSpec.partitions.map(_.path),
+        parameters = Map.empty,
+        userSpecifiedSchema = Some(partitionSpec.partitionColumns),
+        fileStatusCache = fileStatusCache,
+        userSpecifiedPartitionSpec = Some(partitionSpec),
+        metadataOpsTimeNs = Some(timeNs))
     } else {
-      new InMemoryFileIndex(
-        sparkSession, rootPaths, table.storage.properties, userSpecifiedSchema = None)
+      new InMemoryFileIndex(sparkSession, rootPaths, parameters = table.storage.properties,
+        userSpecifiedSchema = None, fileStatusCache = fileStatusCache)
     }
   }
 
@@ -107,23 +112,3 @@ class HiveCatalogFileIndexFactory extends CatalogFileIndexFactory {
      spark: SparkSession, catalogTable: CatalogTable, tableSize: Long): CatalogFileIndex =
     new HiveCatalogFileIndex(spark, catalogTable, tableSize)
 }
-
-/**
- * An override of the standard HDFS listing based catalog, that overrides the partition spec with
- * the information from the metastore.
- *
- * @param tableBasePath The default base path of the Hive metastore table
- * @param partitionSpec The partition specifications from Hive metastore
- */
-private class PrunedInMemoryFileIndex(
-    sparkSession: SparkSession,
-    tableBasePath: Path,
-    fileStatusCache: FileStatusCache,
-    override val partitionSpec: PartitionSpec,
-    override val metadataOpsTimeNs: Option[Long])
-  extends InMemoryFileIndex(
-    sparkSession,
-    partitionSpec.partitions.map(_.path),
-    Map.empty,
-    Some(partitionSpec.partitionColumns),
-    fileStatusCache)
