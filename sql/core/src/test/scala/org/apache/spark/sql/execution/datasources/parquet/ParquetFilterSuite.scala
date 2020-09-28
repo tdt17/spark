@@ -28,7 +28,6 @@ import scala.reflect.runtime.universe.TypeTag
 import org.apache.parquet.filter2.predicate.{FilterApi, FilterPredicate, Operators}
 import org.apache.parquet.filter2.predicate.FilterApi._
 import org.apache.parquet.filter2.predicate.Operators.{Column => _, _}
-import org.apache.parquet.hadoop.ParquetInputFormat
 import org.apache.parquet.schema.MessageType
 
 import org.apache.spark.{SparkConf, SparkException}
@@ -851,9 +850,7 @@ abstract class ParquetFilterSuite extends QueryTest with ParquetTest with Shared
   test("SPARK-11661 Still pushdown filters returned by unhandledFilters") {
     import testImplicits._
     withSQLConf(SQLConf.PARQUET_FILTER_PUSHDOWN_ENABLED.key -> "true") {
-      withSQLConf(
-      SQLConf.PARQUET_VECTORIZED_READER_ENABLED.key -> "false",
-      ParquetInputFormat.RECORD_FILTERING_ENABLED -> "true") {
+      withSQLConf(SQLConf.PARQUET_VECTORIZED_READER_ENABLED.key -> "false") {
         withTempPath { dir =>
           val path = s"${dir.getCanonicalPath}/part=1"
           (1 to 3).map(i => (i, i.toString)).toDF("a", "b").write.parquet(path)
@@ -1617,7 +1614,6 @@ class ParquetV1FilterSuite extends ParquetFilterSuite {
 
     Seq(("parquet", true), ("", false)).foreach { case (pushdownDsList, nestedPredicatePushdown) =>
       withSQLConf(
-        ParquetInputFormat.RECORD_FILTERING_ENABLED -> "true",
         SQLConf.PARQUET_FILTER_PUSHDOWN_ENABLED.key -> "true",
         SQLConf.PARQUET_FILTER_PUSHDOWN_DATE_ENABLED.key -> "true",
         SQLConf.PARQUET_FILTER_PUSHDOWN_TIMESTAMP_ENABLED.key -> "true",

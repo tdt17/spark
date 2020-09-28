@@ -122,7 +122,7 @@ class ParquetFileFormat
     // Sets compression scheme
     conf.set(ParquetOutputFormat.COMPRESSION, parquetOptions.compressionCodecClassName)
 
-    // Change to match default once upstream picks it up
+    // TODO(rshkv): Change to match default once upstream picks it up
     conf.set(ParquetOutputFormat.PAGE_WRITE_CHECKSUM_ENABLED, "false")
 
     // SPARK-15719: Disables writing Parquet summary files by default.
@@ -230,12 +230,6 @@ class ParquetFileFormat
     hadoopConf.setBoolean(
       SQLConf.PARQUET_INT96_AS_TIMESTAMP.key,
       sparkSession.sessionState.conf.isParquetINT96AsTimestamp)
-
-    // TODO(@jcasale) do we need this?
-    // By default, disable record level filtering.
-    if (hadoopConf.get(ParquetInputFormat.RECORD_FILTERING_ENABLED) == null) {
-      hadoopConf.setBoolean(ParquetInputFormat.RECORD_FILTERING_ENABLED, false)
-    }
 
     val broadcastedHadoopConf =
       sparkSession.sparkContext.broadcast(new SerializableConfiguration(hadoopConf))
