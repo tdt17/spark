@@ -17,8 +17,6 @@
 
 package org.apache.spark.sql.execution.datasources.jdbc
 
-import java.sql.{Date, Timestamp}
-
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.Partition
