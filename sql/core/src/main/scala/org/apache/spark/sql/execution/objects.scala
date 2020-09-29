@@ -249,7 +249,7 @@ case class MapPartitionsInRWithArrowExec(
       // 7. Each row from each batch
       //
       // Note that, unlike Python vectorization implementation, R side sends Arrow formatted
-      // binary in a batch due to the limitati7n of R API. See also ARROW-4512.
+      // binary in a batch due to the limitation of R API. See also ARROW-4512.
       val columnarBatchIter = runner.compute(batchIter, -1)
       val outputProject = UnsafeProjection.create(output, output)
       columnarBatchIter.flatMap { batch =>
