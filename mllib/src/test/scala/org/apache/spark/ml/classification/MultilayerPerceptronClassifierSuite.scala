@@ -60,8 +60,7 @@ class MultilayerPerceptronClassifierSuite extends MLTest with DefaultReadWriteTe
     }
     mlpc.setLayers(Array[Int](1, 1))
   }
-
-  // palantir/spark
+  // ignore palantir/spark
   ignore("XOR function learning as binary classification problem with two outputs.") {
     val layers = Array[Int](2, 5, 2)
     val trainer = new MultilayerPerceptronClassifier()

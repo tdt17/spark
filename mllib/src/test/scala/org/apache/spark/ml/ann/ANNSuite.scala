@@ -54,8 +54,7 @@ class ANNSuite extends SparkFunSuite with MLlibTestSparkContext {
     }
   }
 
-  // palantir/spark
-  ignore("ANN with SoftMax learns XOR function with 2-bit output and batch GD optimizer") {
+  ignore("ANN with SoftMax learns XOR function with 2-bit output and batch GD optimizer -- ignore palantir/spark") {
     val inputs = Array(
       Array(0.0, 0.0),
       Array(0.0, 1.0),

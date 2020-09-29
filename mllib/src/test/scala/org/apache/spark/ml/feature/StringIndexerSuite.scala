@@ -30,10 +30,44 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
 
   test("params") {
     ParamsSuite.checkParams(new StringIndexer)
-    val model = new StringIndexerModel("indexer", Array("a", "b"))
+    val model = new StringIndexerModel("indexer", Array(Array("a", "b")))
     val modelWithoutUid = new StringIndexerModel(Array("a", "b"))
     ParamsSuite.checkParams(model)
     ParamsSuite.checkParams(modelWithoutUid)
+  }
+
+  test("params: input/output columns") {
+    val stringIndexerSingleCol = new StringIndexer()
+      .setInputCol("in").setOutputCol("out")
+    val inOutCols1 = stringIndexerSingleCol.getInOutCols()
+    assert(inOutCols1._1 === Array("in"))
+    assert(inOutCols1._2 === Array("out"))
+
+    val stringIndexerMultiCol = new StringIndexer()
+      .setInputCols(Array("in1", "in2")).setOutputCols(Array("out1", "out2"))
+    val inOutCols2 = stringIndexerMultiCol.getInOutCols()
+    assert(inOutCols2._1 === Array("in1", "in2"))
+    assert(inOutCols2._2 === Array("out1", "out2"))
+
+
+    val df = Seq((0, "a"), (1, "b"), (2, "c"), (3, "a"), (4, "a"), (5, "c")).toDF("id", "label")
+
+    intercept[IllegalArgumentException] {
+      new StringIndexer().setInputCol("in").setOutputCols(Array("out1", "out2")).fit(df)
+    }
+    intercept[IllegalArgumentException] {
+      new StringIndexer().setInputCols(Array("in1", "in2")).setOutputCol("out1").fit(df)
+    }
+    intercept[IllegalArgumentException] {
+      new StringIndexer().setInputCols(Array("in1", "in2"))
+        .setOutputCols(Array("out1", "out2", "out3"))
+        .fit(df)
+    }
+    intercept[IllegalArgumentException] {
+      new StringIndexer().setInputCols(Array("in1", "in2"))
+        .setOutputCols(Array("out1", "out1"))
+        .fit(df)
+    }
   }
 
   test("StringIndexer") {
@@ -51,7 +85,7 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
       (2, 1.0),
       (3, 0.0),
       (4, 0.0),
-       (5, 1.0)
+      (5, 1.0)
     ).toDF("id", "labelIndex")
 
     testTransformerByGlobalCheckFunc[(Int, String)](df, indexerModel, "id", "labelIndex") { rows =>
@@ -184,7 +218,7 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
   }
 
   test("StringIndexerModel should keep silent if the input column does not exist.") {
-    val indexerModel = new StringIndexerModel("indexer", Array("a", "b", "c"))
+    val indexerModel = new StringIndexerModel("indexer", Array(Array("a", "b", "c")))
       .setInputCol("label")
       .setOutputCol("labelIndex")
     val df = spark.range(0L, 10L).toDF()
@@ -224,7 +258,7 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
   }
 
   test("StringIndexerModel read/write") {
-    val instance = new StringIndexerModel("myStringIndexerModel", Array("a", "b", "c"))
+    val instance = new StringIndexerModel("myStringIndexerModel", Array(Array("a", "b", "c")))
       .setInputCol("myInputCol")
       .setOutputCol("myOutputCol")
       .setHandleInvalid("skip")
@@ -340,11 +374,32 @@ class StringIndexerSuite extends MLTest with DefaultReadWriteTest {
     }
   }
 
+  test("StringIndexer order types: secondary sort by alphabets when frequency equal") {
+    val data = Seq((0, "a"), (1, "a"), (2, "b"), (3, "b"), (4, "c"), (5, "d"))
+    val df = data.toDF("id", "label")
+    val indexer = new StringIndexer()
+      .setInputCol("label")
+      .setOutputCol("labelIndex")
+
+    val expected = Seq(Set((0, 0.0), (1, 0.0), (2, 1.0), (3, 1.0), (4, 2.0), (5, 3.0)),
+      Set((0, 2.0), (1, 2.0), (2, 3.0), (3, 3.0), (4, 0.0), (5, 1.0)))
+
+    var idx = 0
+    for (orderType <- Seq("frequencyDesc", "frequencyAsc")) {
+      val transformed = indexer.setStringOrderType(orderType).fit(df).transform(df)
+      val output = transformed.select("id", "labelIndex").rdd.map { r =>
+        (r.getInt(0), r.getDouble(1))
+      }.collect().toSet
+      assert(output === expected(idx))
+      idx += 1
+    }
+  }
+
   test("SPARK-22446: StringIndexerModel's indexer UDF should not apply on filtered data") {
     val df = List(
-         ("A", "London", "StrA"),
-         ("B", "Bristol", null),
-         ("C", "New York", "StrC")).toDF("ID", "CITY", "CONTENT")
+      ("A", "London", "StrA"),
+      ("B", "Bristol", null),
+      ("C", "New York", "StrC")).toDF("ID", "CITY", "CONTENT")
 
     val dfNoBristol = df.filter($"CONTENT".isNotNull)
 
