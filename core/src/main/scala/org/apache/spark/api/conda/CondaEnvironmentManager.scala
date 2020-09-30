@@ -71,6 +71,10 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
     defaultInfo("pkgs_dirs").extract[List[String]]
   }
 
+  private[conda] lazy val verbosityFlags: List[String] = {
+    0.until(verbosity).map(_ => "-v").toList
+  }
+
   def listPackagesExplicit(envDir: String): List[String] = {
     logInfo("Retrieving a conda environment's list of installed packages")
     val command = Process(List(condaBinaryPath, "list", "-p", envDir, "--explicit"), None)
@@ -90,7 +94,13 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
       condaEnvVars: Map[String, String] = Map.empty): CondaEnvironment = {
     condaMode match {
       case CondaBootstrapMode.Solve =>
-        create(baseDir, condaPackages, condaChannelUrls, condaExtraArgs, condaEnvVars)
+        create(
+          baseDir,
+          condaPackages,
+          condaPackageUrlsUserInfo,
+          condaChannelUrls,
+          condaExtraArgs,
+          condaEnvVars)
       case CondaBootstrapMode.File =>
         createWithFile(
           baseDir, condaPackageUrls, condaPackageUrlsUserInfo, condaExtraArgs, condaEnvVars)
@@ -100,6 +110,7 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
   def create(
       baseDir: String,
       condaPackages: Seq[String],
+      condaPackageUrlsUserInfo: Option[String],
       condaChannelUrls: Seq[String],
       condaExtraArgs: Seq[String] = Nil,
       condaEnvVars: Map[String, String] = Map.empty): CondaEnvironment = {
@@ -113,8 +124,6 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
     val linkedBaseDir = Utils.createTempDir("/tmp", "conda").toPath.resolve("real")
     logInfo(s"Creating symlink $linkedBaseDir -> $baseDir")
     Files.createSymbolicLink(linkedBaseDir, Paths.get(baseDir))
-
-    val verbosityFlags = 0.until(verbosity).map(_ => "-v").toList
 
     // Attempt to create environment
     runCondaProcess(
@@ -135,7 +144,7 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
       CondaBootstrapMode.Solve,
       condaPackages,
       Nil,
-      None,
+      condaPackageUrlsUserInfo,
       condaChannelUrls,
       condaExtraArgs)
   }
@@ -158,8 +167,6 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
     val linkedBaseDir = Utils.createTempDir("/tmp", "conda").toPath.resolve("real")
     logInfo(s"Creating symlink $linkedBaseDir -> $baseDir")
     Files.createSymbolicLink(linkedBaseDir, Paths.get(baseDir))
-
-    val verbosityFlags = 0.until(verbosity).map(_ => "-v").toList
 
     // Authenticate URLs if we have a UserInfo argument
     val finalCondaPackageUrls = if (condaPackageUrlsUserInfo.isDefined) {
