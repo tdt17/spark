@@ -92,6 +92,7 @@ final class CondaEnvironment(
     manager.runCondaProcess(rootPath,
       List("install", "-n", envName, "-y")
         ::: extraArgs.toList
+        ::: manager.verbosityFlags
         ::: "--" :: packages.toList,
       description = s"install dependencies in conda env $condaEnvDir",
       channels = channels.iterator.map(_.url).toList,
@@ -113,17 +114,35 @@ final class CondaEnvironment(
   }
 
   /**
-   * This is for sending the instructions to the executors so they can replicate the same steps.
+   * This is for sending the instructions to the executors so they can replicate the same conda
+   * environment.
+   * <p><ul>
+   *   <li>In {@code File} mode, re-use the same specfile on executors.</li>
+   *   <li>In {@code Solve} mode, list resolved packages into a specfile
+   *    and use that on executors.</li>
+   * </ul>
    */
   def buildSetupInstructions: CondaSetupInstructions = {
-    CondaSetupInstructions(
-      bootstrapMode,
-      packages.toList,
-      bootstrapPackageUrls,
-      bootstrapPackageUrlsUserInfo,
-      channels.toList,
-      extraArgs,
-      envVars)
+    bootstrapMode match {
+      case CondaBootstrapMode.Solve =>
+        CondaSetupInstructions(
+          CondaBootstrapMode.File,
+          packages.toList,
+          getTransitivePackageUrls(),
+          bootstrapPackageUrlsUserInfo,
+          channels.toList,
+          extraArgs,
+          envVars)
+      case CondaBootstrapMode.File =>
+        CondaSetupInstructions(
+          bootstrapMode,
+          packages.toList,
+          bootstrapPackageUrls,
+          bootstrapPackageUrlsUserInfo,
+          channels.toList,
+          extraArgs,
+          envVars)
+    }
   }
 }
 
