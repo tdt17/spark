@@ -34,7 +34,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.catalyst.expressions.Uuid
 import org.apache.spark.sql.catalyst.optimizer.ConvertToLocalRelation
-import org.apache.spark.sql.catalyst.plans.logical.{LocalRelation, OneRowRelation, Union}
+import org.apache.spark.sql.catalyst.plans.logical.{LocalRelation, OneRowRelation}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.execution.{FilterExec, QueryExecution, WholeStageCodegenExec}
 import org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanHelper
@@ -91,129 +91,6 @@ class DataFrameSuite extends QueryTest
     checkAnswer(
       testData,
       testData.collect().toSeq)
-  }
-
-  test("union all") {
-    val unionDF = testData.union(testData).union(testData)
-      .union(testData).union(testData)
-
-    // Before optimizer, Union should be combined.
-    assert(unionDF.queryExecution.analyzed.collect {
-      case j: Union if j.children.size == 5 => j }.size === 1)
-
-    checkAnswer(
-      unionDF.agg(avg('key), max('key), min('key), sum('key)),
-      Row(50.5, 100, 1, 25250) :: Nil
-    )
-
-    // unionAll is an alias of union
-    val unionAllDF = testData.unionAll(testData).unionAll(testData)
-      .unionAll(testData).unionAll(testData)
-
-    checkAnswer(unionDF, unionAllDF)
-  }
-
-  test("union should union DataFrames with UDTs (SPARK-13410)") {
-    val rowRDD1 = sparkContext.parallelize(Seq(Row(1, new ExamplePoint(1.0, 2.0))))
-    val schema1 = StructType(Array(StructField("label", IntegerType, false),
-                    StructField("point", new ExamplePointUDT(), false)))
-    val rowRDD2 = sparkContext.parallelize(Seq(Row(2, new ExamplePoint(3.0, 4.0))))
-    val schema2 = StructType(Array(StructField("label", IntegerType, false),
-                    StructField("point", new ExamplePointUDT(), false)))
-    val df1 = spark.createDataFrame(rowRDD1, schema1)
-    val df2 = spark.createDataFrame(rowRDD2, schema2)
-
-    checkAnswer(
-      df1.union(df2).orderBy("label"),
-      Seq(Row(1, new ExamplePoint(1.0, 2.0)), Row(2, new ExamplePoint(3.0, 4.0)))
-    )
-  }
-
-  test("union by name") {
-    var df1 = Seq((1, 2, 3)).toDF("a", "b", "c")
-    var df2 = Seq((3, 1, 2)).toDF("c", "a", "b")
-    val df3 = Seq((2, 3, 1)).toDF("b", "c", "a")
-    val unionDf = df1.unionByName(df2.unionByName(df3))
-    checkAnswer(unionDf,
-      Row(1, 2, 3) :: Row(1, 2, 3) :: Row(1, 2, 3) :: Nil
-    )
-
-    // Check if adjacent unions are combined into a single one
-    assert(unionDf.queryExecution.optimizedPlan.collect { case u: Union => true }.size == 1)
-
-    // Check failure cases
-    df1 = Seq((1, 2)).toDF("a", "c")
-    df2 = Seq((3, 4, 5)).toDF("a", "b", "c")
-    var errMsg = intercept[AnalysisException] {
-      df1.unionByName(df2)
-    }.getMessage
-    assert(errMsg.contains(
-      "Union can only be performed on tables with the same number of columns, " +
-        "but the first table has 2 columns and the second table has 3 columns"))
-
-    df1 = Seq((1, 2, 3)).toDF("a", "b", "c")
-    df2 = Seq((4, 5, 6)).toDF("a", "c", "d")
-    errMsg = intercept[AnalysisException] {
-      df1.unionByName(df2)
-    }.getMessage
-    assert(errMsg.contains("""Cannot resolve column name "b" among (a, c, d)"""))
-  }
-
-  test("union by name - type coercion") {
-    var df1 = Seq((1, "a")).toDF("c0", "c1")
-    var df2 = Seq((3, 1L)).toDF("c1", "c0")
-    checkAnswer(df1.unionByName(df2), Row(1L, "a") :: Row(1L, "3") :: Nil)
-
-    df1 = Seq((1, 1.0)).toDF("c0", "c1")
-    df2 = Seq((8L, 3.0)).toDF("c1", "c0")
-    checkAnswer(df1.unionByName(df2), Row(1.0, 1.0) :: Row(3.0, 8.0) :: Nil)
-
-    df1 = Seq((2.0f, 7.4)).toDF("c0", "c1")
-    df2 = Seq(("a", 4.0)).toDF("c1", "c0")
-    checkAnswer(df1.unionByName(df2), Row(2.0, "7.4") :: Row(4.0, "a") :: Nil)
-
-    df1 = Seq((1, "a", 3.0)).toDF("c0", "c1", "c2")
-    df2 = Seq((1.2, 2, "bc")).toDF("c2", "c0", "c1")
-    val df3 = Seq(("def", 1.2, 3)).toDF("c1", "c2", "c0")
-    checkAnswer(df1.unionByName(df2.unionByName(df3)),
-      Row(1, "a", 3.0) :: Row(2, "bc", 1.2) :: Row(3, "def", 1.2) :: Nil
-    )
-  }
-
-  test("union by name - check case sensitivity") {
-    def checkCaseSensitiveTest(): Unit = {
-      val df1 = Seq((1, 2, 3)).toDF("ab", "cd", "ef")
-      val df2 = Seq((4, 5, 6)).toDF("cd", "ef", "AB")
-      checkAnswer(df1.unionByName(df2), Row(1, 2, 3) :: Row(6, 4, 5) :: Nil)
-    }
-    withSQLConf(SQLConf.CASE_SENSITIVE.key -> "true") {
-      val errMsg2 = intercept[AnalysisException] {
-        checkCaseSensitiveTest()
-      }.getMessage
-      assert(errMsg2.contains("""Cannot resolve column name "ab" among (cd, ef, AB)"""))
-    }
-    withSQLConf(SQLConf.CASE_SENSITIVE.key -> "false") {
-      checkCaseSensitiveTest()
-    }
-  }
-
-  test("union by name - check name duplication") {
-    Seq((true, ("a", "a")), (false, ("aA", "Aa"))).foreach { case (caseSensitive, (c0, c1)) =>
-      withSQLConf(SQLConf.CASE_SENSITIVE.key -> caseSensitive.toString) {
-        var df1 = Seq((1, 1)).toDF(c0, c1)
-        var df2 = Seq((1, 1)).toDF("c0", "c1")
-        var errMsg = intercept[AnalysisException] {
-          df1.unionByName(df2)
-        }.getMessage
-        assert(errMsg.contains("Found duplicate column(s) in the left attributes:"))
-        df1 = Seq((1, 1)).toDF("c0", "c1")
-        df2 = Seq((1, 1)).toDF(c0, c1)
-        errMsg = intercept[AnalysisException] {
-          df1.unionByName(df2)
-        }.getMessage
-        assert(errMsg.contains("Found duplicate column(s) in the right attributes:"))
-      }
-    }
   }
 
   test("empty data frame") {
@@ -2572,6 +2449,11 @@ class DataFrameSuite extends QueryTest
       val df = spark.read.parquet(f.getAbsolutePath).as[BigDecimal]
       assert(df.schema === new StructType().add(StructField("d", DecimalType(38, 0))))
     }
+  }
+
+  test("SPARK-32764: -0.0 and 0.0 should be equal") {
+    val df = Seq(0.0 -> -0.0).toDF("pos", "neg")
+    checkAnswer(df.select($"pos" > $"neg"), Row(false))
   }
 
   test("SPARK-32635: Replace references with foldables coming only from the node's children") {
