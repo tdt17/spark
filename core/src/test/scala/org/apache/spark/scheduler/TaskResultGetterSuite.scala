@@ -267,8 +267,7 @@ class TaskResultGetterSuite extends SparkFunSuite with BeforeAndAfter with Local
 
     // Just run 1 task and capture the corresponding DirectTaskResult
     sc.parallelize(1 to 1, 1).count()
-    val captor: ArgumentCaptor[DirectTaskResult[_]] =
-      ArgumentCaptor.forClass(classOf[DirectTaskResult[_]])
+    val captor = ArgumentCaptor.forClass(classOf[DirectTaskResult[_]])
     verify(spyScheduler, times(1)).handleSuccessfulTask(any(), anyLong(), captor.capture())
 
     // When a task finishes, the executor sends a serialized DirectTaskResult to the driver

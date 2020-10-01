@@ -32,7 +32,6 @@ import org.apache.spark.metrics.MetricsSystem
 import org.apache.spark.resource.ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID
 import org.apache.spark.scheduler._
 import org.apache.spark.scheduler.cluster.ExecutorInfo
-import org.apache.spark.storage.BlockManagerMaster
 import org.apache.spark.util.{Clock, ManualClock, SystemClock}
 
 /**
@@ -1143,7 +1142,7 @@ class ExecutorAllocationManagerSuite extends SparkFunSuite {
       .set(config.DYN_ALLOCATION_TESTING, true)
       // SPARK-22864: effectively disable the allocation schedule by setting the period to a
       // really long value.
-      .set(TEST_SCHEDULE_INTERVAL, 10000L)
+      .set(TEST_SCHEDULE_INTERVAL, 30000L)
   }
 
   private def createManager(
@@ -1235,11 +1234,6 @@ private object ExecutorAllocationManagerSuite extends PrivateMethodTester {
   private val _onSpeculativeTaskSubmitted =
     PrivateMethod[Unit](Symbol("onSpeculativeTaskSubmitted"))
   private val _totalRunningTasks = PrivateMethod[Int](Symbol("totalRunningTasks"))
-  private val _executorsPendingToRemove =
-    PrivateMethod[collection.Set[String]](Symbol("executorsPendingToRemove"))
-  private val _executorIds = PrivateMethod[collection.Set[String]](Symbol("executorIds"))
-  private val _removeTimes = PrivateMethod[collection.Map[String, Long]](Symbol("removeTimes"))
-
 
   private def numExecutorsToAdd(manager: ExecutorAllocationManager): Int = {
     manager invokePrivate _numExecutorsToAdd()
@@ -1249,21 +1243,8 @@ private object ExecutorAllocationManagerSuite extends PrivateMethodTester {
     manager invokePrivate _numExecutorsTarget()
   }
 
-  private def executorsPendingToRemove(
-      manager: ExecutorAllocationManager): collection.Set[String] = {
-    manager invokePrivate _executorsPendingToRemove()
-  }
-
-  private def executorIds(manager: ExecutorAllocationManager): collection.Set[String] = {
-    manager invokePrivate _executorIds()
-  }
-
   private def addTime(manager: ExecutorAllocationManager): Long = {
     manager invokePrivate _addTime()
-  }
-
-  private def removeTimes(manager: ExecutorAllocationManager): collection.Map[String, Long] = {
-    manager invokePrivate _removeTimes()
   }
 
   private def schedule(manager: ExecutorAllocationManager): Unit = {

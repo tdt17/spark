@@ -256,7 +256,7 @@ class DistributedSuite extends SparkFunSuite with Matchers with LocalSparkContex
   }
 
   test("recover from node failures") {
-    import DistributedSuite.{failOnMarkedIdentity, markNodeIfIdentity}
+    import DistributedSuite.{markNodeIfIdentity, failOnMarkedIdentity}
     DistributedSuite.amMaster = true
     sc = new SparkContext(clusterUrl, "test")
     val data = sc.parallelize(Seq(true, true), 2)
@@ -266,7 +266,7 @@ class DistributedSuite extends SparkFunSuite with Matchers with LocalSparkContex
   }
 
   test("recover from repeated node failures during shuffle-map") {
-    import DistributedSuite.{failOnMarkedIdentity, markNodeIfIdentity}
+    import DistributedSuite.{markNodeIfIdentity, failOnMarkedIdentity}
     DistributedSuite.amMaster = true
     sc = new SparkContext(clusterUrl, "test")
     for (i <- 1 to 3) {
@@ -278,7 +278,7 @@ class DistributedSuite extends SparkFunSuite with Matchers with LocalSparkContex
   }
 
   test("recover from repeated node failures during shuffle-reduce") {
-    import DistributedSuite.{failOnMarkedIdentity, markNodeIfIdentity}
+    import DistributedSuite.{markNodeIfIdentity, failOnMarkedIdentity}
     DistributedSuite.amMaster = true
     sc = new SparkContext(clusterUrl, "test")
     for (i <- 1 to 3) {
@@ -297,7 +297,7 @@ class DistributedSuite extends SparkFunSuite with Matchers with LocalSparkContex
   }
 
   test("recover from node failures with replication") {
-    import DistributedSuite.{failOnMarkedIdentity, markNodeIfIdentity}
+    import DistributedSuite.{markNodeIfIdentity, failOnMarkedIdentity}
     DistributedSuite.amMaster = true
     // Using more than two nodes so we don't have a symmetric communication pattern and might
     // cache a partially correct list of peers.
