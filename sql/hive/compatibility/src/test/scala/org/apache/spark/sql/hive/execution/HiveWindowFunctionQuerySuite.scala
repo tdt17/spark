@@ -260,7 +260,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
       |order by s desc, r desc;
      """.stripMargin, reset = false)
 
-  /* ignore palantir/spark
   createQueryTest("windowing_rank.q (deterministic) 2",
     s"""
       |select ts, dec, rnk
@@ -309,7 +308,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
       |where rnk = 1
       |order by ts, dec, rnk;
      """.stripMargin, reset = false)
-  */
 
   /////////////////////////////////////////////////////////////////////////////
   // Tests from windowing.q
@@ -317,8 +315,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
   // many tests and the syntax of test "-- 7. testJoinWithWindowingAndPTF"
   // is not supported right now.
   /////////////////////////////////////////////////////////////////////////////
-
-  /* ignore palantir/spark
   createQueryTest("windowing.q -- 1. testWindowing",
     s"""
       |select p_mfgr, p_name, p_size,
@@ -453,7 +449,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
       |from part
       |window w1 as (distribute by p_mfgr sort by p_name rows between 2 preceding and 2 following)
     """.stripMargin, reset = false)
-  */
 
   /* Disabled because:
      - Spark uses a different default stddev.
@@ -477,8 +472,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
       |             rows between 2 preceding and 2 following)
     """.stripMargin, reset = false)
   */
-
-  /* ignore palantir/spark
   createQueryTest("windowing.q -- 16. testMultipleWindows",
     s"""
       |select  p_mfgr,p_name, p_size,
@@ -601,7 +594,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
       |window w1 as (distribute by p_mfgr sort by p_name rows between 2 preceding and 2 following),
       |       w2 as (partition by p_mfgr order by p_name)
     """.stripMargin, reset = false)
-  */
 
   /* p_name is not a numeric column. What is Hive's semantic?
   createQueryTest("windowing.q -- 31. testWindowCrossReference",
@@ -669,7 +661,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
     """.stripMargin, reset = false)
   */
 
-  /* ignore palantir/spark
   createQueryTest("windowing.q -- 36. testRankWithPartitioning",
     """
       |select p_mfgr, p_name, p_size,
@@ -743,7 +734,6 @@ class HiveWindowFunctionQuerySuite extends HiveComparisonTest with BeforeAndAfte
       |from part
       |order by p_name
     """.stripMargin, reset = false)
-  */
 }
 
 class HiveWindowFunctionQueryFileSuite

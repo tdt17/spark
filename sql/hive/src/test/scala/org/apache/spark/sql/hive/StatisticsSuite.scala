@@ -1534,7 +1534,6 @@ class StatisticsSuite extends StatisticsCollectionTestBase with TestHiveSingleto
           sql(s"INSERT INTO $tblName VALUES (1, 'a', '2019-12-13')")
 
           // analyze table
-          // expected sizeInBytes differs from upstream because our catalog tables are different
           sql(s"ANALYZE TABLE $tblName COMPUTE STATISTICS NOSCAN")
           var tableStats = getTableStats(tblName)
           assert(tableStats.sizeInBytes == 650)

@@ -300,8 +300,7 @@ class HiveSparkSubmitSuite
     runSparkSubmit(args)
   }
 
-  // palantir/spark
-  ignore("SPARK-18360: default table path of tables in default database should depend on the " +
+  test("SPARK-18360: default table path of tables in default database should depend on the " +
     "location of default database") {
     val unusedJar = TestUtils.createJarWithClasses(Seq.empty)
     val args = Seq(
@@ -315,8 +314,7 @@ class HiveSparkSubmitSuite
     runSparkSubmit(args)
   }
 
-  // palantir/spark
-  ignore("SPARK-18989: DESC TABLE should not fail with format class not found") {
+  test("SPARK-18989: DESC TABLE should not fail with format class not found") {
     val unusedJar = TestUtils.createJarWithClasses(Seq.empty)
 
     val argsForCreateTable = Seq(

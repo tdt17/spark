@@ -1177,7 +1177,7 @@ abstract class SQLQuerySuiteBase extends QueryTest with SQLTestUtils with TestHi
       Row(false))
   }
 
-  ignore("SPARK-6785: HiveQuerySuite - Date cast -- ignored palantir/spark") {
+  test("SPARK-6785: HiveQuerySuite - Date cast") {
     // new Date(0) == 1970-01-01 00:00:00.0 GMT == 1969-12-31 16:00:00.0 PST
     checkAnswer(
       sql(
@@ -2241,7 +2241,7 @@ abstract class SQLQuerySuiteBase extends QueryTest with SQLTestUtils with TestHi
   }
 
   Seq("orc", "parquet").foreach { format =>
-    ignore(s"SPARK-18355 Read data from a hive table with a new column - $format") {
+    test(s"SPARK-18355 Read data from a hive table with a new column - $format") {
       val client =
         spark.sharedState.externalCatalog.unwrapped.asInstanceOf[HiveExternalCatalog].client
 
