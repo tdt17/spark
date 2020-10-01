@@ -132,8 +132,7 @@ abstract class BaseYarnClusterSuite
       extraJars: Seq[String] = Nil,
       extraConf: Map[String, String] = Map(),
       extraEnv: Map[String, String] = Map(),
-      outFile: Option[File] = None,
-      timeoutDuration: FiniteDuration = 3.minutes): SparkAppHandle.State = {
+      outFile: Option[File] = None): SparkAppHandle.State = {
     val deployMode = if (clientMode) "client" else "cluster"
     val propsFile = createConfFile(extraClassPath = extraClassPath, extraConf = extraConf)
     val env = Map("YARN_CONF_DIR" -> hadoopConfDir.getAbsolutePath()) ++ extraEnv
@@ -168,7 +167,7 @@ abstract class BaseYarnClusterSuite
 
     val handle = launcher.startApplication()
     try {
-      eventually(timeout(timeoutDuration), interval(1 second)) {
+      eventually(timeout(3.minutes), interval(1.second)) {
         assert(handle.getState().isFinal())
       }
     } finally {

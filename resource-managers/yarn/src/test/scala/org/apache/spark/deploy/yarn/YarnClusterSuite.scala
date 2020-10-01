@@ -432,8 +432,7 @@ class YarnClusterSuite extends BaseYarnClusterSuite {
       appArgs = Seq(result.getAbsolutePath()),
       extraEnv = extraEnvVars,
       extraConf = extraConf,
-      outFile = outFile,
-      timeoutDuration = 5.minutes) // give it a bit longer
+      outFile = outFile)
     checkResult(finalState, result, outFile = outFile)
   }
 
