@@ -18,7 +18,8 @@
 package org.apache.spark.scheduler.cluster
 
 import java.util.EnumSet
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.{AtomicBoolean}
+import javax.servlet.DispatcherType
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -26,7 +27,6 @@ import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
 import com.palantir.logsafe.{SafeArg, UnsafeArg}
-import javax.servlet.DispatcherType
 import org.apache.hadoop.yarn.api.records.{ApplicationAttemptId, ApplicationId}
 import org.eclipse.jetty.servlet.{FilterHolder, FilterMapping}
 
