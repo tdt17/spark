@@ -1536,6 +1536,7 @@ class StatisticsSuite extends StatisticsCollectionTestBase with TestHiveSingleto
           // analyze table
           sql(s"ANALYZE TABLE $tblName COMPUTE STATISTICS NOSCAN")
           var tableStats = getTableStats(tblName)
+          // TODO(rshkv): Why does sizeInBytes differ from upstream?
           assert(tableStats.sizeInBytes == 650)
           assert(tableStats.rowCount.isEmpty)
 
