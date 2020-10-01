@@ -2890,7 +2890,7 @@ object SparkContext extends SafeLogging {
           limitingResourceName = taskReq.resourceName
         }
       }
-      if(!shouldCheckExecCores && Utils.isDynamicAllocationEnabled(sc.conf)) {
+      if(!shouldCheckExecCores) {
         // if we can't rely on the executor cores config throw a warning for user
         safeLogWarning("Please ensure that the number of slots available on your " +
           "executors is limited by the number of cores to task cpus and not another " +
@@ -2914,10 +2914,9 @@ object SparkContext extends SafeLogging {
             s"result in wasted resources due to resource ${limitingResourceName} limiting the " +
             s"number of runnable tasks per executor to: ${numSlots}. Please adjust " +
             s"your configuration."
-          if (Utils.isTesting) {
+          if (sc.conf.get(RESOURCES_WARNING_TESTING)) {
             throw new SparkException(message)
           } else {
-//            TODO(@jcasale) fix this logging
             safeLogWarning(message)
           }
         }
