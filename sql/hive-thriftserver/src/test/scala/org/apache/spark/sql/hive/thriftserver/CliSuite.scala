@@ -313,8 +313,7 @@ class CliSuite extends SparkFunSuite with BeforeAndAfterAll with Logging {
     )
   }
 
-  // flakes in palantir/spark
-  ignore("Commands using SerDe provided in --jars") {
+  test("Commands using SerDe provided in --jars") {
     val jarFile = HiveTestJars.getHiveHcatalogCoreJar().getCanonicalPath
 
     val dataFilePath =
