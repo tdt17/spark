@@ -43,7 +43,7 @@ import org.apache.spark.sql.types._
 /**
  * A serializer to serialize data in catalyst format to data in avro format.
  */
-private[sql] class AvroSerializer(
+class AvroSerializer(
     rootCatalystType: DataType,
     rootAvroType: Schema,
     nullable: Boolean,

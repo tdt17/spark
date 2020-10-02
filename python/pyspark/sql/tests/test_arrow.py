@@ -21,9 +21,6 @@ import threading
 import time
 import unittest
 import warnings
-import sys
-if sys.version >= '3':
-    basestring = unicode = str
 
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import Row, SparkSession
@@ -56,7 +53,7 @@ class ArrowTests(ReusedSQLTestCase):
 
         # Synchronize default timezone between Python and Java
         cls.tz_prev = os.environ.get("TZ", None)  # save current tz if set
-        tz = "America/Los_Angeles"
+        tz = "UTC"
         os.environ["TZ"] = tz
         time.tzset()
 
@@ -251,7 +248,7 @@ class ArrowTests(ReusedSQLTestCase):
             self.assertNotEqual(result_ny, result_la)
 
             # Correct result_la by adjusting 3 hours difference between Los Angeles and New York
-            result_la_corrected = [Row(**{k: v - timedelta(hours=3) if k == '8_timestamp_t' else v
+            result_la_corrected = [Row(**{k: v + timedelta(hours=5) if k == '8_timestamp_t' else v
                                           for k, v in row.asDict().items()})
                                    for row in result_la]
             self.assertEqual(result_ny, result_la_corrected)
@@ -345,6 +342,29 @@ class ArrowTests(ReusedSQLTestCase):
         self.assertEqual(pdf_col_names, df.columns)
         self.assertEqual(pdf_col_names, df_arrow.columns)
 
+    def test_createDataFrame_with_str_col(self):
+        import pandas as pd
+        pdf = pd.DataFrame({"a": ["x"]})
+
+        df, df_arrow = self._createDataFrame_toggle(pdf)
+        self.assertEqual(df.schema, df_arrow.schema)
+
+    def test_createDataFrame_with_str_array_col(self):
+        import pandas as pd
+        pdf = pd.DataFrame({"a": [["x"]]})
+
+        with self.sql_conf({"spark.sql.execution.arrow.fallback.enabled": True}):
+            df, df_arrow = self._createDataFrame_toggle(pdf)
+            self.assertEqual(df.schema, df_arrow.schema)
+
+    def test_createDataFrame_with_str_struct_col(self):
+        import pandas as pd
+        pdf = pd.DataFrame({"a": [{"x": "x"}]})
+
+        with self.sql_conf({"spark.sql.execution.arrow.fallback.enabled": True}):
+            df, df_arrow = self._createDataFrame_toggle(pdf)
+            self.assertEqual(df.schema, df_arrow.schema)
+
     def test_createDataFrame_fallback_enabled(self):
         with QuietTest(self.sc):
             with self.sql_conf({"spark.sql.execution.arrow.pyspark.fallback.enabled": True}):
@@ -431,11 +451,31 @@ class ArrowTests(ReusedSQLTestCase):
         self.assertEqual(len(pdf), 0)
         self.assertEqual(list(pdf.columns), ["col1"])
 
-    def test_createDataFrame_empty_partition(self):
-        pdf = pd.DataFrame({"c1": [1], "c2": ["string"]})
-        df = self.spark.createDataFrame(pdf)
-        self.assertEqual([Row(c1=1, c2='string')], df.collect())
-        self.assertGreater(self.spark.sparkContext.defaultParallelism, len(pdf))
+
+@unittest.skipIf(
+    not have_pandas or not have_pyarrow,
+    pandas_requirement_message or pyarrow_requirement_message)
+class MaxResultArrowTests(unittest.TestCase):
+    # These tests are separate as 'spark.driver.maxResultSize' configuration
+    # is a static configuration to Spark context.
+
+    @classmethod
+    def setUpClass(cls):
+        cls.spark = SparkSession(SparkContext(
+            'local[4]', cls.__name__, conf=SparkConf().set("spark.driver.maxResultSize", "10k")))
+
+        # Explicitly enable Arrow and disable fallback.
+        cls.spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "true")
+        cls.spark.conf.set("spark.sql.execution.arrow.pyspark.fallback.enabled", "false")
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, "spark"):
+            cls.spark.stop()
+
+    def test_exception_by_max_results(self):
+        with self.assertRaisesRegexp(Exception, "is bigger than"):
+            self.spark.range(0, 10000, 1, 100).toPandas()
 
 
 @unittest.skipIf(

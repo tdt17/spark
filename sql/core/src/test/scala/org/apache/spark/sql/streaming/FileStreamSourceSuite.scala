@@ -518,6 +518,7 @@ class FileStreamSourceSuite extends FileStreamSourceTest {
     withTable(testTableName) {
       withTempPath { output =>
         Seq("foo").toDS().write.text(output.getCanonicalPath)
+        // TODO(jcasale): this is .parquet() in original palantir/spark -- investigate
         Seq("bar").toDS().write.mode("append").orc(output.getCanonicalPath)
         val df = spark.readStream.option("pathGlobFilter", "*.txt")
           .format("text").load(output.getCanonicalPath)

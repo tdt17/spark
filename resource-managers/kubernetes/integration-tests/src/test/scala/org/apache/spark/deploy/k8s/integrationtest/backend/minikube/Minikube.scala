@@ -117,6 +117,36 @@ private[spark] object Minikube extends Logging {
       }
     }
   }
+// TODO(@jcasale): double-check that we didn't miss anything in merge here.
+//  // Covers minikube status output after Minikube V0.30.
+//  private def getIfNewMinikubeStatus(statusString: Seq[String]): MinikubeStatus.Value = {
+//    val hostString = statusString.find(_.contains(s"$HOST_PREFIX "))
+//    val kubeletString = statusString.find(_.contains(s"$KUBELET_PREFIX "))
+//    val apiserverString = statusString.find(_.contains(s"$APISERVER_PREFIX "))
+//    val kubectlString = statusString.find(_.contains(s"$KUBECTL_PREFIX "))
+//
+//    if (hostString.isEmpty || kubeletString.isEmpty
+//      || apiserverString.isEmpty || kubectlString.isEmpty) {
+//      MinikubeStatus.NONE
+//    } else {
+//      val status1 = hostString.get.replaceFirst(s"$HOST_PREFIX ", "")
+//      val status2 = kubeletString.get.replaceFirst(s"$KUBELET_PREFIX ", "")
+//      val status3 = apiserverString.get.replaceFirst(s"$APISERVER_PREFIX ", "")
+//      val status4 = kubectlString.get.replaceFirst(s"$KUBECTL_PREFIX ", "")
+//      if (!status4.contains("Correctly Configured:")) {
+//        MinikubeStatus.NONE
+//      } else {
+//        val stats = List(status1, status2, status3)
+//          .map(MinikubeStatus.unapply)
+//          .map(_.getOrElse(throw new IllegalStateException(s"Unknown status $statusString")))
+//        if (stats.exists(_ != MinikubeStatus.RUNNING)) {
+//          MinikubeStatus.NONE
+//        } else {
+//          MinikubeStatus.RUNNING
+//        }
+//      }
+//    }
+//  }
 
   private def executeMinikube(action: String, args: String*): Seq[String] = {
     ProcessUtils.executeProcess(

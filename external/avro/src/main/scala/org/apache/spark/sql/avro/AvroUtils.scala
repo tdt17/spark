@@ -37,7 +37,7 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.util.Utils
 
-private[sql] object AvroUtils extends Logging {
+object AvroUtils extends Logging {
   def inferSchema(
       spark: SparkSession,
       options: Map[String, String],

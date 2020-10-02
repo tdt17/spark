@@ -386,6 +386,35 @@ private[spark] object Config extends Logging {
       .booleanConf
       .createWithDefault(true)
 
+  val FILES_DOWNLOAD_LOCATION =
+    ConfigBuilder("spark.kubernetes.mountDependencies.filesDownloadDir")
+      .doc("Location to download files to in the driver and executors. When using " +
+        "spark-submit, this directory must be empty and will be mounted as an empty directory " +
+        "volume on the driver and executor pods.")
+      .stringConf
+      .createWithDefault("/var/spark-data/spark-files")
+
+  val EXECUTOR_SUBMITTED_SMALL_FILES_SECRET =
+    ConfigBuilder("spark.kubernetes.mountdependencies.smallfiles.executor.secretName")
+      .doc("Name of the secret that should be mounted into the executor containers for" +
+        " distributing submitted small files without the resource staging server.")
+      .internal()
+      .stringConf
+      .createOptional
+
+  val EXECUTOR_SUBMITTED_SMALL_FILES_SECRET_MOUNT_PATH =
+    ConfigBuilder("spark.kubernetes.mountdependencies.smallfiles.executor.secretMountPath")
+      .doc(s"Mount path in the executors for the secret given by" +
+        s" ${EXECUTOR_SUBMITTED_SMALL_FILES_SECRET.key}")
+      .internal()
+      .stringConf
+      .createOptional
+
+  val KUBERNETES_LOCAL_SUBMISSION =
+    ConfigBuilder("spark.kubernetes.local.submission")
+    .booleanConf
+    .createWithDefault(false)
+
   val KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD =
     ConfigBuilder("spark.kubernetes.dynamicAllocation.deleteGracePeriod")
       .doc("How long to wait for executors to shut down gracefully before a forceful kill.")

@@ -60,7 +60,7 @@ class ScalarPandasUDFTests(ReusedSQLTestCase):
 
         # Synchronize default timezone between Python and Java
         cls.tz_prev = os.environ.get("TZ", None)  # save current tz if set
-        tz = "America/Los_Angeles"
+        tz = "UTC"
         os.environ["TZ"] = tz
         time.tzset()
 

@@ -66,6 +66,11 @@ if ! [ -z ${HADOOP_CONF_DIR+x} ]; then
   SPARK_CLASSPATH="$HADOOP_CONF_DIR:$SPARK_CLASSPATH";
 fi
 
+if [ -n "$SPARK_MOUNTED_FILES_FROM_SECRET_DIR" ]; then
+  cp -R "$SPARK_MOUNTED_FILES_FROM_SECRET_DIR/." .
+fi
+
+case "$1" in
 case "$1" in
   driver)
     shift 1
@@ -90,6 +95,15 @@ case "$1" in
       --cores $SPARK_EXECUTOR_CORES
       --app-id $SPARK_APPLICATION_ID
       --hostname $SPARK_EXECUTOR_POD_IP
+    )
+    ;;
+  local)
+    shift 1
+    CMD=(
+      "$SPARK_HOME/bin/spark-submit"
+      --master 'local[*]'
+      --deploy-mode client
+      "$@"
     )
     ;;
 

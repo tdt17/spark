@@ -21,9 +21,11 @@ SPARK_PROFILES=${1:-"-Pmesos -Pkubernetes -Pyarn -Pspark-ganglia-lgpl -Pkinesis-
 
 # NOTE: echo "q" is needed because SBT prompts the user for input on encountering a build file
 # with failure (either resolution or compilation); the "q" makes SBT quit.
+# TODO(@jcasale): double-check that we need -Phadoop-cloud here
 ERRORS=$(echo -e "q\n" \
     | build/sbt \
         ${SPARK_PROFILES} \
+        -Phadoop-cloud \
         -Pdocker-integration-tests \
         -Pkubernetes-integration-tests \
         scalastyle test:scalastyle \

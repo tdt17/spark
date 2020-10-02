@@ -434,9 +434,9 @@ class StreamingLinearRegressionWithTests(MLLibStreamingTestCase):
         slr = StreamingLinearRegressionWithSGD(stepSize=0.2, numIterations=25)
         slr.setInitialWeights([0.0])
 
-        # Create fifteen batches with 100 sample points in each.
+        # Create ten batches with 100 sample points in each.
         batches = []
-        for i in range(15):
+        for i in range(10):
             batch = LinearDataGenerator.generateLinearInput(
                 0.0, [10.0], [0.0], [1.0 / 3.0], 100, 42 + i, 0.1)
             batches.append(self.sc.parallelize(batch))

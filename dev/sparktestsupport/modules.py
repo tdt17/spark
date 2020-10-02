@@ -100,75 +100,9 @@ tags = Module(
     ]
 )
 
-kvstore = Module(
-    name="kvstore",
-    dependencies=[tags],
-    source_file_regexes=[
-        "common/kvstore/",
-    ],
-    sbt_test_goals=[
-        "kvstore/test",
-    ],
-)
-
-network_common = Module(
-    name="network-common",
-    dependencies=[tags],
-    source_file_regexes=[
-        "common/network-common/",
-    ],
-    sbt_test_goals=[
-        "network-common/test",
-    ],
-)
-
-network_shuffle = Module(
-    name="network-shuffle",
-    dependencies=[tags],
-    source_file_regexes=[
-        "common/network-shuffle/",
-    ],
-    sbt_test_goals=[
-        "network-shuffle/test",
-    ],
-)
-
-unsafe = Module(
-    name="unsafe",
-    dependencies=[tags],
-    source_file_regexes=[
-        "common/unsafe",
-    ],
-    sbt_test_goals=[
-        "unsafe/test",
-    ],
-)
-
-launcher = Module(
-    name="launcher",
-    dependencies=[tags],
-    source_file_regexes=[
-        "launcher/",
-    ],
-    sbt_test_goals=[
-        "launcher/test",
-    ],
-)
-
-core = Module(
-    name="core",
-    dependencies=[kvstore, network_common, network_shuffle, unsafe, launcher],
-    source_file_regexes=[
-        "core/",
-    ],
-    sbt_test_goals=[
-        "core/test",
-    ],
-)
-
 catalyst = Module(
     name="catalyst",
-    dependencies=[tags, core],
+    dependencies=[tags],
     source_file_regexes=[
         "sql/catalyst/",
     ],
@@ -188,27 +122,29 @@ sql = Module(
     ],
 )
 
-hive = Module(
-    name="hive",
-    dependencies=[sql],
-    source_file_regexes=[
-        "sql/hive/",
-        "bin/spark-sql",
-    ],
-    build_profile_flags=[
-        "-Phive",
-    ],
-    sbt_test_goals=[
-        "hive/test",
-    ],
-    test_tags=[
-        "org.apache.spark.tags.ExtendedHiveTest"
-    ]
-)
+
+# hive = Module(
+#     name="hive",
+#     dependencies=[sql],
+#     source_file_regexes=[
+#         "sql/hive/",
+#         "bin/spark-sql",
+#     ],
+#     build_profile_flags=[
+#         "-Phive",
+#     ],
+#     sbt_test_goals=[
+#         "hive/test",
+#     ],
+#     test_tags=[
+#         "org.apache.spark.tags.ExtendedHiveTest"
+#     ]
+# )
+
 
 repl = Module(
     name="repl",
-    dependencies=[hive],
+    dependencies=[],
     source_file_regexes=[
         "repl/",
     ],
@@ -217,20 +153,21 @@ repl = Module(
     ],
 )
 
-hive_thriftserver = Module(
-    name="hive-thriftserver",
-    dependencies=[hive],
-    source_file_regexes=[
-        "sql/hive-thriftserver",
-        "sbin/start-thriftserver.sh",
-    ],
-    build_profile_flags=[
-        "-Phive-thriftserver",
-    ],
-    sbt_test_goals=[
-        "hive-thriftserver/test",
-    ]
-)
+
+# hive_thriftserver = Module(
+#     name="hive-thriftserver",
+#     dependencies=[hive],
+#     source_file_regexes=[
+#         "sql/hive-thriftserver",
+#         "sbin/start-thriftserver.sh",
+#     ],
+#     build_profile_flags=[
+#         "-Phive-thriftserver",
+#     ],
+#     sbt_test_goals=[
+#         "hive-thriftserver/test",
+#     ]
+# )
 
 avro = Module(
     name="avro",
@@ -267,7 +204,7 @@ sketch = Module(
 
 graphx = Module(
     name="graphx",
-    dependencies=[tags, core],
+    dependencies=[tags],
     source_file_regexes=[
         "graphx/",
     ],
@@ -278,7 +215,7 @@ graphx = Module(
 
 streaming = Module(
     name="streaming",
-    dependencies=[tags, core],
+    dependencies=[tags],
     source_file_regexes=[
         "streaming",
     ],
@@ -294,7 +231,7 @@ streaming = Module(
 # fail other PRs.
 streaming_kinesis_asl = Module(
     name="streaming-kinesis-asl",
-    dependencies=[tags, core],
+    dependencies=[tags],
     source_file_regexes=[
         "external/kinesis-asl/",
         "external/kinesis-asl-assembly/",
@@ -313,23 +250,21 @@ streaming_kinesis_asl = Module(
 
 streaming_kafka_0_10 = Module(
     name="streaming-kafka-0-10",
-    dependencies=[streaming, core],
+    dependencies=[streaming],
     source_file_regexes=[
         # The ending "/" is necessary otherwise it will include "sql-kafka" codes
         "external/kafka-0-10/",
         "external/kafka-0-10-assembly",
-        "external/kafka-0-10-token-provider",
     ],
     sbt_test_goals=[
         "streaming-kafka-0-10/test",
-        "token-provider-kafka-0-10/test"
     ]
 )
 
 
 mllib_local = Module(
     name="mllib-local",
-    dependencies=[tags, core],
+    dependencies=[tags],
     source_file_regexes=[
         "mllib-local",
     ],
@@ -354,7 +289,7 @@ mllib = Module(
 
 examples = Module(
     name="examples",
-    dependencies=[graphx, mllib, streaming, hive],
+    dependencies=[graphx, mllib, streaming],
     source_file_regexes=[
         "examples/",
     ],
@@ -365,7 +300,7 @@ examples = Module(
 
 pyspark_core = Module(
     name="pyspark-core",
-    dependencies=[core],
+    dependencies=[],
     source_file_regexes=[
         "python/(?!pyspark/(ml|mllib|sql|streaming))"
     ],
@@ -401,7 +336,7 @@ pyspark_core = Module(
 
 pyspark_sql = Module(
     name="pyspark-sql",
-    dependencies=[pyspark_core, hive, avro],
+    dependencies=[pyspark_core, avro],
     source_file_regexes=[
         "python/pyspark/sql"
     ],
@@ -557,7 +492,7 @@ pyspark_ml = Module(
 
 sparkr = Module(
     name="sparkr",
-    dependencies=[hive, mllib],
+    dependencies=[mllib],
     source_file_regexes=[
         "R/",
     ],
@@ -611,7 +546,7 @@ mesos = Module(
 kubernetes = Module(
     name="kubernetes",
     dependencies=[],
-    source_file_regexes=["resource-managers/kubernetes"],
+    source_file_regexes=["resource-managers/kubernetes/core"],
     build_profile_flags=["-Pkubernetes"],
     sbt_test_goals=["kubernetes/test"]
 )
@@ -633,11 +568,19 @@ spark_ganglia_lgpl = Module(
     ]
 )
 
+cloud = Module(
+    name="hadoop-cloud",
+    dependencies=[],
+    source_file_regexes=["hadoop-cloud/"],
+    build_profile_flags=["-Phadoop-cloud"],
+    sbt_test_goals=["hadoop-cloud/test"]
+)
+
 # The root module is a dummy module which is used to run all of the tests.
 # No other modules should directly depend on this module.
 root = Module(
     name="root",
-    dependencies=[build, core],  # Changes to build should trigger all tests.
+    dependencies=[build],  # Changes to build should trigger all tests.
     source_file_regexes=[],
     # In order to run all of the tests, enable every test profile:
     build_profile_flags=list(set(

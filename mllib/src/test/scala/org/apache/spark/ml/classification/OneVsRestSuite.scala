@@ -68,7 +68,7 @@ class OneVsRestSuite extends MLTest with DefaultReadWriteTest {
     ParamsSuite.checkParams(model)
   }
 
-  test("one-vs-rest: default params") {
+  ignore("one-vs-rest: default params -- ignored palantir/spark") {
     val numClasses = 3
     val ova = new OneVsRest()
       .setClassifier(new LogisticRegression)

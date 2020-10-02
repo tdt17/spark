@@ -1219,7 +1219,7 @@ setMethod("collect",
               })
             }
 
-            dtypes <- dtypes(x)
+                dtypes <- dtypes(x)
             ncol <- length(dtypes)
             if (ncol <= 0) {
               # empty data.frame with 0 columns and 0 rows
@@ -1231,17 +1231,16 @@ setMethod("collect",
                 authSecret <- portAuth[[2]]
                 conn <- socketConnection(
                   port = port, blocking = TRUE, open = "wb", timeout = connectionTimeout)
-                version <- packageVersion("arrow")
                 output <- tryCatch({
                   doServerAuth(conn, authSecret)
-                  if (version$minor >= 17 || version$major >= 1) {
-                    arrowTable <- arrow::read_ipc_stream(readRaw(conn))
+                  arrowTable <- arrow::read_arrow(readRaw(conn))
+                  # Arrow drops `as_tibble` since 0.14.0, see ARROW-5190.
+                  if (exists("as_tibble", envir = asNamespace("arrow"))) {
+                    as.data.frame(arrow::as_tibble(arrowTable), stringsAsFactors = stringsAsFactors)
                   } else {
-                    arrowTable <- arrow::read_arrow(readRaw(conn))
+                    as.data.frame(arrowTable, stringsAsFactors = stringsAsFactors)
                   }
-                  as.data.frame(arrowTable, stringsAsFactors = stringsAsFactors)
-                },
-                finally = {
+                }, finally = {
                   close(conn)
                 })
                 return(output)

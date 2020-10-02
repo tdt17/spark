@@ -29,10 +29,7 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
 
   # Setup global test environment
   # Install Spark first to set SPARK_HOME
-
-  # NOTE(shivaram): We set overwrite to handle any old tar.gz files or directories left behind on
-  # CRAN machines. For Jenkins we should already have SPARK_HOME set.
-  install.spark(overwrite = TRUE)
+  install.spark()
 
   sparkRDir <- file.path(Sys.getenv("SPARK_HOME"), "R")
   sparkRWhitelistSQLDirs <- c("spark-warehouse", "metastore_db")
@@ -54,33 +51,30 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
                              spark.executor.extraJavaOptions = tmpArg)
   }
 
-  test_package("SparkR")
-
   if (identical(Sys.getenv("NOT_CRAN"), "true")) {
-    # set random seed for predictable results. mostly for base's sample() in tree and classification
-    set.seed(42)
-
-    # TODO (SPARK-30663) To be removed once testthat 1.x is removed from all builds
-    if (packageVersion("testthat")$major <= 1) {
-      # testthat 1.x
-      test_runner <- testthat:::run_tests
-      reporter <- "summary"
+    if (identical(Sys.getenv("CONDA_TESTS"), "true")) {
+        summaryReporter <- ProgressReporter$new()
+        options(testthat.output_file = "target/R/R/conda/r-tests.xml")
+        junitReporter <- JunitReporter$new()
+        # set random seed for predictable results. mostly for base's sample() in tree and classification
+        set.seed(42)
+        testthat:::test_package_dir("SparkR",
+        file.path(sparkRDir, "pkg", "tests", "condatests"),
+        NULL,
+        MultiReporter$new(reporters = list(summaryReporter, junitReporter)))
     } else {
-      # testthat >= 2.0.0
-      test_runner <- testthat:::test_package_dir
-      dir.create("target/test-reports", showWarnings = FALSE)
-      reporter <- MultiReporter$new(list(
-        SummaryReporter$new(),
-        JunitReporter$new(file = "target/test-reports/test-results.xml")
-      ))
+        summaryReporter <- ProgressReporter$new()
+        options(testthat.output_file = "target/R/R/r-tests.xml")
+        junitReporter <- JunitReporter$new()
+        reporter <- MultiReporter$new(reporters = list(summaryReporter, junitReporter))
+        # set random seed for predictable results. mostly for base's sample() in tree and classification
+        test_package("SparkR", reporter = reporter)
+        set.seed(42)
+        testthat:::test_package_dir("SparkR",
+        file.path(sparkRDir, "pkg", "tests", "fulltests"),
+        NULL,
+        reporter)
     }
-
-    test_runner("SparkR",
-                file.path(sparkRDir, "pkg", "tests", "fulltests"),
-                NULL,
-                reporter)
   }
-
-  SparkR:::uninstallDownloadedSpark()
 
 }

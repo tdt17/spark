@@ -19,8 +19,7 @@ package org.apache.spark.metrics.sink
 
 import java.util.Properties
 
-import com.codahale.metrics.MetricRegistry
-import com.codahale.metrics.jmx.JmxReporter
+import com.codahale.metrics.{JmxReporter, MetricRegistry}
 
 import org.apache.spark.SecurityManager
 
