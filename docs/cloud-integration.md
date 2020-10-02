@@ -52,9 +52,9 @@ Key differences are:
 * Changes to stored objects may not be immediately visible, both in directory listings and actual data access.
 * The means by which directories are emulated may make working with them slow.
 * Rename operations may be very slow and, on failure, leave the store in an unknown state.
-* Seeking within a file may require new HTTP calls, hurting performance.
+* Seeking within a file may require new HTTP calls, hurting performance. 
 
-How does this affect Spark?
+How does this affect Spark? 
 
 1. Reading and writing data can be significantly slower than working with a normal filesystem.
 1. Some directory structures may be very inefficient to scan during query split calculation.
@@ -76,7 +76,7 @@ objects can be read or written by using their URLs as the path to data.
 For example `sparkContext.textFile("s3a://landsat-pds/scene_list.gz")` will create
 an RDD of the file `scene_list.gz` stored in S3, using the s3a connector.
 
-To add the relevant libraries to an application's classpath, include the `spark-hadoop-cloud`
+To add the relevant libraries to an application's classpath, include the `hadoop-cloud` 
 module and its dependencies.
 
 In Maven, add the following to the `pom.xml` file, assuming `spark.version`
@@ -119,7 +119,7 @@ configuration and security options.
 
 ## Configuring
 
-Each cloud connector has its own set of configuration parameters, again,
+Each cloud connector has its own set of configuration parameters, again, 
 consult the relevant documentation.
 
 ### Recommended settings for writing to object stores
@@ -136,7 +136,7 @@ As it still uses `rename()` to commit files, it is unsafe to use
 when the object store does not have consistent metadata/listings.
 
 The committer can also be set to ignore failures when cleaning up temporary
-files; this reduces the risk that a transient network problem is escalated into a
+files; this reduces the risk that a transient network problem is escalated into a 
 job failure:
 
 ```
@@ -163,7 +163,7 @@ different stores and connectors when renaming directories:
 | Amazon S3     | s3a       | Unsafe                  | O(data) |
 | Azure Storage | wasb      | Safe                    | O(files) |
 | Azure Datalake Gen 2 | abfs | Safe                  | O(1) |
-| Google GCS    | gs        | Safe                    | O(1) |
+| Google Cloud Storage | gs        | Safe                    | O(1) |
 
 As storing temporary files can run up charges; delete
 directories called `"_temporary"` on a regular basis.
@@ -171,7 +171,6 @@ directories called `"_temporary"` on a regular basis.
 ### Parquet I/O Settings
 
 For optimal performance when working with Parquet data use the following settings:
->>>>>>> master
 
 ```
 spark.hadoop.parquet.enable.summary-metadata false
@@ -254,9 +253,9 @@ Here is the documentation on the standard connectors both from Apache and the cl
 * [Azure Blob Storage and Azure Datalake Gen 2](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html).
 * [Azure Data Lake Gen 1](https://hadoop.apache.org/docs/current/hadoop-azure-datalake/index.html).
 * [Hadoop-AWS module (Hadoop 3.x)](https://hadoop.apache.org/docs/current3/hadoop-aws/tools/hadoop-aws/index.html).
-* [Amazon S3 via S3A and S3N (Hadoop 2.x)](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html).
-* [Amazon EMR File System (EMRFS)](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-fs.html). From Amazon
-* [Google Cloud Storage Connector for Spark and Hadoop](https://cloud.google.com/hadoop/google-cloud-storage-connector). From Google
+* [Amazon S3 via S3A and S3N (Hadoop 2.x)](https://hadoop.apache.org/docs/current2/hadoop-aws/tools/hadoop-aws/index.html).
+* [Amazon EMR File System (EMRFS)](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-fs.html). From Amazon.
+* [Google Cloud Storage Connector for Spark and Hadoop](https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage). From Google.
 * [The Azure Blob Filesystem driver (ABFS)](https://docs.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-abfs-driver)
-* IBM Cloud Object Storage connector for Apache Spark: [Stocator](https://github.com/CODAIT/stocator), [IBM Object Storage](https://www.ibm.com/cloud/object-storage). From IBM
+* IBM Cloud Object Storage connector for Apache Spark: [Stocator](https://github.com/CODAIT/stocator), [IBM Object Storage](https://www.ibm.com/cloud/object-storage). From IBM.
 

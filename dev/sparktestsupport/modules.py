@@ -111,7 +111,6 @@ catalyst = Module(
     ],
 )
 
-
 sql = Module(
     name="sql",
     dependencies=[catalyst],
@@ -192,7 +191,6 @@ sql_kafka = Module(
     ]
 )
 
-
 sketch = Module(
     name="sketch",
     dependencies=[tags],
@@ -204,7 +202,6 @@ sketch = Module(
     ]
 )
 
-
 graphx = Module(
     name="graphx",
     dependencies=[tags],
@@ -215,7 +212,6 @@ graphx = Module(
         "graphx/test"
     ]
 )
-
 
 streaming = Module(
     name="streaming",
@@ -302,7 +298,6 @@ examples = Module(
     ]
 )
 
-
 pyspark_core = Module(
     name="pyspark-core",
     dependencies=[],
@@ -338,7 +333,6 @@ pyspark_core = Module(
         "pyspark.tests.test_worker",
     ]
 )
-
 
 pyspark_sql = Module(
     name="pyspark-sql",

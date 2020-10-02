@@ -710,9 +710,9 @@ collect(gapply(spark_df,
 {% endhighlight %}
 </div>
 
-Using the above optimizations with Arrow will produce the same results as when Arrow is not enabled. Note that even with Arrow,
-`collect(spark_df)` results in the collection of all records in the DataFrame to the driver program and should be done on a
-small subset of the data.
+Note that even with Arrow, `collect(spark_df)` results in the collection of all records in the DataFrame to
+the driver program and should be done on a small subset of the data. In addition, the specified output schema
+in `gapply(...)` and `dapply(...)` should be matched to the R DataFrame's returned by the given function.
 
 ## Supported SQL Types
 
