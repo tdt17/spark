@@ -100,6 +100,72 @@ tags = Module(
     ]
 )
 
+kvstore = Module(
+    name="kvstore",
+    dependencies=[tags],
+    source_file_regexes=[
+        "common/kvstore/",
+    ],
+    sbt_test_goals=[
+        "kvstore/test",
+    ],
+)
+
+network_common = Module(
+    name="network-common",
+    dependencies=[tags],
+    source_file_regexes=[
+        "common/network-common/",
+    ],
+    sbt_test_goals=[
+        "network-common/test",
+    ],
+)
+
+network_shuffle = Module(
+    name="network-shuffle",
+    dependencies=[tags],
+    source_file_regexes=[
+        "common/network-shuffle/",
+    ],
+    sbt_test_goals=[
+        "network-shuffle/test",
+    ],
+)
+
+unsafe = Module(
+    name="unsafe",
+    dependencies=[tags],
+    source_file_regexes=[
+        "common/unsafe",
+    ],
+    sbt_test_goals=[
+        "unsafe/test",
+    ],
+)
+
+launcher = Module(
+    name="launcher",
+    dependencies=[tags],
+    source_file_regexes=[
+        "launcher/",
+    ],
+    sbt_test_goals=[
+        "launcher/test",
+    ],
+)
+
+core = Module(
+    name="core",
+    dependencies=[kvstore, network_common, network_shuffle, unsafe, launcher],
+    source_file_regexes=[
+        "core/",
+    ],
+    sbt_test_goals=[
+        "core/test",
+    ],
+)
+
 catalyst = Module(
     name="catalyst",
     dependencies=[tags],
@@ -204,7 +270,7 @@ sketch = Module(
 
 graphx = Module(
     name="graphx",
-    dependencies=[tags],
+    dependencies=[tags, core],
     source_file_regexes=[
         "graphx/",
     ],
@@ -215,7 +281,7 @@ graphx = Module(
 
 streaming = Module(
     name="streaming",
-    dependencies=[tags],
+    dependencies=[tags, core],
     source_file_regexes=[
         "streaming",
     ],
@@ -231,7 +297,7 @@ streaming = Module(
 # fail other PRs.
 streaming_kinesis_asl = Module(
     name="streaming-kinesis-asl",
-    dependencies=[tags],
+    dependencies=[tags, core],
     source_file_regexes=[
         "external/kinesis-asl/",
         "external/kinesis-asl-assembly/",
@@ -250,21 +316,23 @@ streaming_kinesis_asl = Module(
 
 streaming_kafka_0_10 = Module(
     name="streaming-kafka-0-10",
-    dependencies=[streaming],
+    dependencies=[streaming, core],
     source_file_regexes=[
         # The ending "/" is necessary otherwise it will include "sql-kafka" codes
         "external/kafka-0-10/",
         "external/kafka-0-10-assembly",
+        "external/kafka-0-10-token-provider",
     ],
     sbt_test_goals=[
         "streaming-kafka-0-10/test",
+        "token-provider-kafka-0-10/test"
     ]
 )
 
 
 mllib_local = Module(
     name="mllib-local",
-    dependencies=[tags],
+    dependencies=[tags, core],
     source_file_regexes=[
         "mllib-local",
     ],
@@ -300,7 +368,7 @@ examples = Module(
 
 pyspark_core = Module(
     name="pyspark-core",
-    dependencies=[],
+    dependencies=[core],
     source_file_regexes=[
         "python/(?!pyspark/(ml|mllib|sql|streaming))"
     ],
@@ -580,7 +648,7 @@ cloud = Module(
 # No other modules should directly depend on this module.
 root = Module(
     name="root",
-    dependencies=[build],  # Changes to build should trigger all tests.
+    dependencies=[build, core],  # Changes to build should trigger all tests.
     source_file_regexes=[],
     # In order to run all of the tests, enable every test profile:
     build_profile_flags=list(set(
