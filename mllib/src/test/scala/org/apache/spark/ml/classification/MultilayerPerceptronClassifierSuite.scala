@@ -60,8 +60,8 @@ class MultilayerPerceptronClassifierSuite extends MLTest with DefaultReadWriteTe
     }
     mlpc.setLayers(Array[Int](1, 1))
   }
-  // ignore palantir/spark
-  ignore("XOR function learning as binary classification problem with two outputs.") {
+
+  test("XOR function learning as binary classification problem with two outputs.") {
     val layers = Array[Int](2, 5, 2)
     val trainer = new MultilayerPerceptronClassifier()
       .setLayers(layers)
@@ -129,7 +129,7 @@ class MultilayerPerceptronClassifierSuite extends MLTest with DefaultReadWriteTe
     }
   }
 
-  ignore("Test setWeights by training restart -- ignore palantir/spark") {
+  test("Test setWeights by training restart") {
     val dataFrame = Seq(
       (Vectors.dense(0.0, 0.0), 0.0),
       (Vectors.dense(0.0, 1.0), 1.0),
@@ -152,7 +152,7 @@ class MultilayerPerceptronClassifierSuite extends MLTest with DefaultReadWriteTe
       "Training should produce the same weights given equal initial weights and number of steps")
   }
 
-  ignore("3 class classification with 2 hidden layers -- ignore palantir/spark") {
+  test("3 class classification with 2 hidden layers") {
     val nPoints = 1000
 
     // The following coefficients are taken from OneVsRestSuite.scala
@@ -211,7 +211,7 @@ class MultilayerPerceptronClassifierSuite extends MLTest with DefaultReadWriteTe
     testDefaultReadWrite(mlp, testParams = true)
   }
 
-  ignore("read/write: MultilayerPerceptronClassificationModel -- ignore palantir/spark") {
+  test("read/write: MultilayerPerceptronClassificationModel") {
     val mlp = new MultilayerPerceptronClassifier().setLayers(Array(2, 3, 2)).setMaxIter(5)
     val mlpModel = mlp.fit(dataset)
     val newMlpModel = testDefaultReadWrite(mlpModel, testParams = true)
@@ -219,8 +219,7 @@ class MultilayerPerceptronClassifierSuite extends MLTest with DefaultReadWriteTe
     assert(newMlpModel.weights === mlpModel.weights)
   }
 
-  // ignore palantir/spark
-  ignore("should support all NumericType labels and not support other types") {
+  test("should support all NumericType labels and not support other types") {
     val layers = Array(3, 2)
     val mpc = new MultilayerPerceptronClassifier().setLayers(layers).setMaxIter(1)
     MLTestingUtils.checkNumericTypes[
