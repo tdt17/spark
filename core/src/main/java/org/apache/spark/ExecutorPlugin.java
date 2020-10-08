@@ -54,4 +54,38 @@ public interface ExecutorPlugin {
    * will wait for the plugin to terminate before continuing its own shutdown.</p>
    */
   default void shutdown() {}
+
+  /**
+   * Perform any action before the task is run.
+   *
+   * <p>This method is invoked from the same thread the task will be executed.
+   * Task-specific information can be accessed via {@link TaskContext#get}.</p>
+   *
+   * <p>Users should avoid expensive operations here, as this method will be called
+   * on every task, and doing something expensive can significantly slow down a job.
+   * It is not recommended for a user to call a remote service, for example.</p>
+   *
+   * <p>Exceptions thrown from this method do not propagate - they're caught,
+   * logged, and suppressed. Therefore exceptions when executing this method won't
+   * make the job fail.</p>
+   */
+  default void onTaskStart() {}
+
+  /**
+   * Perform an action after tasks completes without exceptions.
+   *
+   * <p>As {@link #onTaskStart() onTaskStart} exceptions are suppressed, this method
+   * will still be invoked even if the corresponding {@link #onTaskStart} call for this
+   * task failed.</p>
+   *
+   * <p>Same warnings of {@link #onTaskStart() onTaskStart} apply here.</p>
+   */
+  default void onTaskSucceeded() {}
+
+  /**
+   * Perform an action after tasks completes with exceptions.
+   *
+   * <p>Same warnings of {@link #onTaskStart() onTaskStart} apply here.</p>
+   */
+  default void onTaskFailed(Throwable throwable) {}
 }

@@ -216,7 +216,7 @@ private[spark] class Executor(
   private[executor] def numRunningTasks: Int = runningTasks.size()
 
   def launchTask(context: ExecutorBackend, taskDescription: TaskDescription): Unit = {
-    val tr = new TaskRunner(context, taskDescription)
+    val tr = new TaskRunner(context, taskDescription, executorPlugins)
     runningTasks.put(taskDescription.taskId, tr)
     threadPool.execute(tr)
   }
@@ -292,7 +292,8 @@ private[spark] class Executor(
 
   class TaskRunner(
       execBackend: ExecutorBackend,
-      private val taskDescription: TaskDescription)
+      private val taskDescription: TaskDescription,
+      private val executorPlugins: Seq[ExecutorPlugin])
     extends Runnable {
 
     val taskId = taskDescription.taskId
@@ -435,7 +436,8 @@ private[spark] class Executor(
           val res = task.run(
             taskAttemptId = taskId,
             attemptNumber = taskDescription.attemptNumber,
-            metricsSystem = env.metricsSystem)
+            metricsSystem = env.metricsSystem,
+            executorPlugins = executorPlugins)
           threwException = false
           res
         } {

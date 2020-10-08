@@ -20,8 +20,11 @@ package org.apache.spark.scheduler
 import java.nio.ByteBuffer
 import java.util.Properties
 
+import com.palantir.logsafe.UnsafeArg
+
 import org.apache.spark._
 import org.apache.spark.executor.TaskMetrics
+import org.apache.spark.internal.SafeLogging
 import org.apache.spark.internal.config.APP_CALLER_CONTEXT
 import org.apache.spark.memory.{MemoryMode, TaskMemoryManager}
 import org.apache.spark.metrics.MetricsSystem
@@ -63,7 +66,7 @@ private[spark] abstract class Task[T](
     val jobId: Option[Int] = None,
     val appId: Option[String] = None,
     val appAttemptId: Option[String] = None,
-    val isBarrier: Boolean = false) extends Serializable {
+    val isBarrier: Boolean = false) extends Serializable with SafeLogging {
 
   @transient lazy val metrics: TaskMetrics =
     SparkEnv.get.closureSerializer.newInstance().deserialize(ByteBuffer.wrap(serializedTaskMetrics))
@@ -72,13 +75,15 @@ private[spark] abstract class Task[T](
    * Called by [[org.apache.spark.executor.Executor]] to run this task.
    *
    * @param taskAttemptId an identifier for this task attempt that is unique within a SparkContext.
-   * @param attemptNumber how many times this task has been attempted (0 for the first attempt)
+   * @param attemptNumber how many times this task has been attempted (0 for the first attempt).
+   * @param executorPlugins the plugins which will be notified of the run of this task.
    * @return the result of the task along with updates of Accumulators.
    */
   final def run(
       taskAttemptId: Long,
       attemptNumber: Int,
-      metricsSystem: MetricsSystem): T = {
+      metricsSystem: MetricsSystem,
+      executorPlugins: Seq[ExecutorPlugin] = Seq.empty): T = {
     SparkEnv.get.blockManager.registerTask(taskAttemptId)
     // TODO SPARK-24874 Allow create BarrierTaskContext based on partitions, instead of whether
     // the stage is barrier.
@@ -117,8 +122,12 @@ private[spark] abstract class Task[T](
       Option(taskAttemptId),
       Option(attemptNumber)).setCurrentContext()
 
+    sendTaskStartToPlugins(executorPlugins)
+
     try {
-      runTask(context)
+      val taskResult = runTask(context)
+      sendTaskSucceededToPlugins(executorPlugins)
+      taskResult
     } catch {
       case e: Throwable =>
         // Catch all errors; run task failure callbacks, and rethrow the exception.
@@ -129,6 +138,7 @@ private[spark] abstract class Task[T](
             e.addSuppressed(t)
         }
         context.markTaskCompleted(Some(e))
+        sendTaskFailedToPlugins(executorPlugins, e)
         throw e
     } finally {
       try {
@@ -155,6 +165,42 @@ private[spark] abstract class Task[T](
           // queried directly in the TaskRunner to check for FetchFailedExceptions.
           TaskContext.unset()
         }
+      }
+    }
+  }
+
+  private def sendTaskStartToPlugins(executorPlugins: Seq[ExecutorPlugin]) {
+    executorPlugins.foreach { plugin =>
+      try {
+        plugin.onTaskStart()
+      } catch {
+        case e: Exception =>
+          safeLogWarning("Plugin onStart failed", e,
+            UnsafeArg.of("pluginName", plugin.getClass().getCanonicalName()))
+      }
+    }
+  }
+
+  private def sendTaskSucceededToPlugins(executorPlugins: Seq[ExecutorPlugin]) {
+    executorPlugins.foreach { plugin =>
+      try {
+        plugin.onTaskSucceeded()
+      } catch {
+        case e: Exception =>
+          safeLogWarning("Plugin onTaskSucceeded failed", e,
+            UnsafeArg.of("pluginName", plugin.getClass().getCanonicalName()))
+      }
+    }
+  }
+
+  private def sendTaskFailedToPlugins(executorPlugins: Seq[ExecutorPlugin], error: Throwable) {
+    executorPlugins.foreach { plugin =>
+      try {
+        plugin.onTaskFailed(error)
+      } catch {
+        case e: Exception =>
+          safeLogWarning("Plugin onTaskFailed failed", e,
+            UnsafeArg.of("pluginName", plugin.getClass().getCanonicalName()))
       }
     }
   }
