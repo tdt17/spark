@@ -602,14 +602,6 @@ spark_ganglia_lgpl = Module(
     ]
 )
 
-cloud = Module(
-    name="hadoop-cloud",
-    dependencies=[],
-    source_file_regexes=["hadoop-cloud/"],
-    build_profile_flags=["-Phadoop-cloud"],
-    sbt_test_goals=["hadoop-cloud/test"]
-)
-
 # The root module is a dummy module which is used to run all of the tests.
 # No other modules should directly depend on this module.
 root = Module(
