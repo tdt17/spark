@@ -23,7 +23,6 @@
 # * Python (2.7.15/3.6.7)
 # * R-base/R-base-dev (4.0.2)
 # * Ruby 2.3 build utilities
-# TODO(@jcasale) verify
 
 FROM ubuntu:18.04
 

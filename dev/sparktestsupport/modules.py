@@ -189,25 +189,6 @@ sql = Module(
 )
 
 
-# hive = Module(
-#     name="hive",
-#     dependencies=[sql],
-#     source_file_regexes=[
-#         "sql/hive/",
-#         "bin/spark-sql",
-#     ],
-#     build_profile_flags=[
-#         "-Phive",
-#     ],
-#     sbt_test_goals=[
-#         "hive/test",
-#     ],
-#     test_tags=[
-#         "org.apache.spark.tags.ExtendedHiveTest"
-#     ]
-# )
-
-
 repl = Module(
     name="repl",
     dependencies=[],
@@ -219,21 +200,6 @@ repl = Module(
     ],
 )
 
-
-# hive_thriftserver = Module(
-#     name="hive-thriftserver",
-#     dependencies=[hive],
-#     source_file_regexes=[
-#         "sql/hive-thriftserver",
-#         "sbin/start-thriftserver.sh",
-#     ],
-#     build_profile_flags=[
-#         "-Phive-thriftserver",
-#     ],
-#     sbt_test_goals=[
-#         "hive-thriftserver/test",
-#     ]
-# )
 
 avro = Module(
     name="avro",

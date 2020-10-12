@@ -59,8 +59,7 @@ class ExternalSorterSuite extends SparkFunSuite with LocalSparkContext {
     cleanupIntermediateFilesInShuffle(withFailures = false)
   }
 
-  // flakes in palantir/spark
-  ignore("cleanup of intermediate files in shuffle with failures") {
+  test("cleanup of intermediate files in shuffle with failures") {
     cleanupIntermediateFilesInShuffle(withFailures = true)
   }
 

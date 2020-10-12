@@ -176,9 +176,9 @@ fi
 if [[ -z "$DONT_BUILD" ]]; then
   BUILD_COMMAND=("$MVN" $MAYBE_CLEAN package -DskipTests $@)
 
-  # Actually build the jar
-  echo -e "\nBuilding with..."
-  echo -e "\$ ${BUILD_COMMAND[@]}\n"
+# Actually build the jar
+echo -e "\nBuilding with..."
+echo -e "\$ ${BUILD_COMMAND[@]}\n"
 
   "${BUILD_COMMAND[@]}"
 else
