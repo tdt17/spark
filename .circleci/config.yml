@@ -29,7 +29,7 @@ deployable-branches-and-tags: &deployable-branches-and-tags
     branches:
       only:
        - master
-       - jc/pt-diff-on-3.0-base
+       - pt-diff-on-3.0-base
        - jc/rectify-merge-breaks
 
 
