@@ -1,4 +1,6 @@
 # Difference with upstream
+* [SPARK-33089](https://issues.apache.org/jira/browse/SPARK-33088) Enhance ExecutorPlugin API to include callbacks on task start and end events
+  * Merged upstream, remove when we migrate to 3.1  
 * [SPARK-18079](https://issues.apache.org/jira/browse/SPARK-18079) - CollectLimitExec.executeToIterator should perform per-partition limits
 * [SPARK-20952](https://issues.apache.org/jira/browse/SPARK-20952) - ParquetFileFormat should forward TaskContext to its forkjoinpool
 * [SPARK-26626](https://issues.apache.org/jira/browse/SPARK-26626) - Limited the maximum size of repeatedly substituted aliases
