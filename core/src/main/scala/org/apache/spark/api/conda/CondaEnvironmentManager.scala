@@ -75,12 +75,24 @@ final class CondaEnvironmentManager(condaBinaryPath: String,
     0.until(verbosity).map(_ => "-v").toList
   }
 
+  /**
+   * List of exact uris of the packages in the solved environment, dropping any credential
+   * information (user info).
+   *
+   * This method is used by executors to obtain specfiles for repro-ing conda envs. File mode
+   * creation expects pkg uris without user info, so we need to drop them before returning.
+   * @param envDir
+   * @return List of uris
+   */
   def listPackagesExplicit(envDir: String): List[String] = {
     logInfo("Retrieving a conda environment's list of installed packages")
     val command = Process(List(condaBinaryPath, "list", "-p", envDir, "--explicit"), None)
 
     val out = runOrFail(command, "retrieving the conda installation's list of installed packages")
-    out.split("\n").filterNot(line => line.startsWith("#") || line.startsWith("@")).toList
+    out.split("\n")
+      .filterNot(line => line.startsWith("#") || line.startsWith("@"))
+      .map(CondaEnvironmentManager.dropUserInfo)
+      .toList
   }
 
   def createWithMode(
@@ -325,6 +337,14 @@ object CondaEnvironmentManager extends Logging {
 
   private[conda] def redactCredentials(line: String): String = {
     httpUrlToken.matcher(line).replaceAll("$1<password>")
+  }
+
+  /**
+   * Safely dropping the <code>userInfo</code> component in URI via <code>UriBuilder</code>.
+   * <code>UriBuilder</code> can safely alter URI components without throwing exceptions.
+   */
+  private[conda] def dropUserInfo(uri: String): String = {
+    UriBuilder.fromUri(uri).userInfo(null).build().toString
   }
 
   def fromConf(sparkConf: SparkConf): CondaEnvironmentManager = {

@@ -71,4 +71,17 @@ class CondaEnvironmentManagerTest extends org.apache.spark.SparkFunSuite with Te
       "via spark.conda.bootstrapPackageUrlsUserInfo.")
         .equals(thrown.getMessage))
   }
+
+  test("CondaEnvironmentManager.dropUserInfo") {
+    val packageUrl = "https://x-5.bar/linux-64/package-0.0.1-py_0.tar.bz2"
+    assert(CondaEnvironmentManager.dropUserInfo(packageUrl) == packageUrl)
+    assert(CondaEnvironmentManager.dropUserInfo(
+      "https://a:b@x-5.bar/linux-64/package-0.0.1-py_0.tar.bz2") == packageUrl)
+    assert(CondaEnvironmentManager.dropUserInfo(
+      "https://:b@x-5.bar/linux-64/package-0.0.1-py_0.tar.bz2") == packageUrl)
+    assert(CondaEnvironmentManager.dropUserInfo(
+      "https://a:<password>@x-5.bar/linux-64/package-0.0.1-py_0.tar.bz2") == packageUrl)
+    assert(CondaEnvironmentManager.dropUserInfo(
+      "https://:Bearer bf.ghi@x-5.bar/linux-64/package-0.0.1-py_0.tar.bz2") == packageUrl)
+  }
 }
