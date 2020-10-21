@@ -663,6 +663,14 @@ case class UnionExec(children: Seq[SparkPlan]) extends SparkPlan {
     }
   }
 
+  override def outputPartitioning: Partitioning = {
+    // The PartitionAwareUnionRDD used in sparkContext.union(..) preserves partitioning i
+    // all the RDDs have the same partitioning.
+    val childPartitionings = children.map(_.outputPartitioning).toSet
+    if (childPartitionings.size == 1) childPartitionings.head
+    else super.outputPartitioning
+  }
+
   protected override def doExecute(): RDD[InternalRow] =
     sparkContext.union(children.map(_.execute()))
 }
