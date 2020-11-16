@@ -447,6 +447,11 @@ object ParquetFileFormat extends Logging {
     val taskContext = TaskContext.get()
     ThreadUtils.parmap(partFiles, "readingParquetFooters", 8) { currentFile =>
       try {
+        // This is Palantir-specific: We have a FileSystem that reads local
+        // properties from the TaskContext. Because the TaskContext singleton is a ThreadLocal
+        // it's not forwarded to the forked thread we're in right now, hence we're setting it.
+        //
+        // See https://issues.apache.org/jira/browse/SPARK-20952
         TaskContext.setTaskContext(taskContext)
         // Skips row group information since we only need the schema.
         // ParquetFileReader.readFooter throws RuntimeException, instead of IOException,
