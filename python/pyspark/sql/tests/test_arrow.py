@@ -353,7 +353,7 @@ class ArrowTests(ReusedSQLTestCase):
         import pandas as pd
         pdf = pd.DataFrame({"a": [["x"]]})
 
-        with self.sql_conf({"spark.sql.execution.arrow.fallback.enabled": True}):
+        with self.sql_conf({"spark.sql.execution.arrow.pyspark.fallback.enabled": True}):
             df, df_arrow = self._createDataFrame_toggle(pdf)
             self.assertEqual(df.schema, df_arrow.schema)
 
@@ -361,9 +361,23 @@ class ArrowTests(ReusedSQLTestCase):
         import pandas as pd
         pdf = pd.DataFrame({"a": [{"x": "x"}]})
 
-        with self.sql_conf({"spark.sql.execution.arrow.fallback.enabled": True}):
+        with self.sql_conf({"spark.sql.execution.arrow.pyspark.fallback.enabled": True}):
             df, df_arrow = self._createDataFrame_toggle(pdf)
             self.assertEqual(df.schema, df_arrow.schema)
+
+    def test_createDataFrame_with_str_binary_mixed(self):
+        import pandas as pd
+        pdf = pd.DataFrame({"a": [u"unicode-value", "binary-under-python-2"]})
+
+        df, df_arrow = self._createDataFrame_toggle(pdf)
+        self.assertEqual(df.schema, df_arrow.schema)
+
+    def test_createDataFrame_with_real_binary(self):
+        import pandas as pd
+        pdf = pd.DataFrame({"a": [bytearray(b"a"), bytearray(b"c")]})
+
+        df, df_arrow = self._createDataFrame_toggle(pdf)
+        self.assertEqual(df.schema, df_arrow.schema)
 
     def test_createDataFrame_fallback_enabled(self):
         with QuietTest(self.sc):
