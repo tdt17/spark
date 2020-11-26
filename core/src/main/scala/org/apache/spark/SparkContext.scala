@@ -2701,7 +2701,13 @@ object SparkContext extends SafeLogging {
    */
   private[spark] def numDriverCores(master: String, conf: SparkConf): Int = {
     def convertToInt(threads: String): Int = {
-      if (threads == "*") Runtime.getRuntime.availableProcessors() else threads.toInt
+      if (threads == "*") {
+        conf.getOption(DRIVER_CORES.key)
+          .map(_.toInt)
+          .getOrElse(Runtime.getRuntime.availableProcessors)
+      } else {
+        threads.toInt
+      }
     }
     master match {
       case "local" => 1
