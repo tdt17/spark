@@ -1069,7 +1069,7 @@ private[spark] class DAGScheduler(
 
   private def copyFromPropertiesToActiveContextLocalProperties(
   properties: Properties,
-  key: String) = {
+  key: String): Unit = {
     if (properties != null && properties.contains(key)) {
       SparkContext.getActive.foreach(context => context.setLocalProperty(
         key,
