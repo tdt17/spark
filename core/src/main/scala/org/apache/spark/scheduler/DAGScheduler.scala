@@ -1002,7 +1002,13 @@ private[spark] class DAGScheduler(
       callSite: CallSite,
       listener: JobListener,
       properties: Properties): Unit = {
+    val foundryBearerTokenKey: String =
+    "foundry.spark.session.bearerToken"
+    val foundryTemporaryAuthCredentialsKey: String =
+    "foundry.spark.session.temporaryCredentialsAuthToken"
     var finalStage: ResultStage = null
+    copyFromPropertiesToActiveContextLocalProperties(properties, foundryBearerTokenKey)
+    copyFromPropertiesToActiveContextLocalProperties(properties, foundryTemporaryAuthCredentialsKey)
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
@@ -1059,6 +1065,16 @@ private[spark] class DAGScheduler(
     listenerBus.post(
       SparkListenerJobStart(job.jobId, jobSubmissionTime, stageInfos, properties))
     submitStage(finalStage)
+  }
+
+  private def copyFromPropertiesToActiveContextLocalProperties(
+  properties: Properties,
+  key: String) = {
+    if (properties.contains(key)) {
+      SparkContext.getActive.foreach(context => context.setLocalProperty(
+        key,
+        properties.get(key).toString))
+    }
   }
 
   private[scheduler] def handleMapStageSubmitted(jobId: Int,
