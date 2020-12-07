@@ -42,13 +42,12 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 import scala.util.control.{ControlThrowable, NonFatal}
 import scala.util.matching.Regex
-
 import _root_.io.netty.channel.unix.Errors.NativeIoException
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import com.google.common.io.{ByteStreams, Files => GFiles}
 import com.google.common.net.InetAddresses
 import org.apache.commons.codec.binary.Hex
-import org.apache.commons.lang3.SystemUtils
+import org.apache.commons.lang3.{SerializationUtils, SystemUtils}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, FileUtil, Path}
 import org.apache.hadoop.io.compress.{CompressionCodecFactory, SplittableCompressionCodec}
@@ -56,10 +55,9 @@ import org.apache.hadoop.security.UserGroupInformation
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.eclipse.jetty.util.MultiException
 import org.slf4j.Logger
-
 import org.apache.spark._
 import org.apache.spark.deploy.SparkHadoopUtil
-import org.apache.spark.internal.{config, Logging}
+import org.apache.spark.internal.{Logging, config}
 import org.apache.spark.internal.config._
 import org.apache.spark.internal.config.Streaming._
 import org.apache.spark.internal.config.Tests.IS_TESTING
@@ -2900,9 +2898,7 @@ private[spark] object Utils extends Logging {
 
   /** Create a new properties object with the same values as `props` */
   def cloneProperties(props: Properties): Properties = {
-    val resultProps = new Properties()
-    props.forEach((k, v) => resultProps.put(k, v))
-    resultProps
+    SerializationUtils.clone(props)
   }
 }
 
