@@ -1004,9 +1004,11 @@ private[spark] class DAGScheduler(
       listener: JobListener,
       properties: Properties): Unit = {
     var finalStage: ResultStage = null
-    val tokenKeys = properties.keySet.asScala.map((key: Any) => key.asInstanceOf[String])
-      .filter((key: String) => key.startsWith("foundry.spark.session"))
-    tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
+    if (properties != null) {
+      val tokenKeys = properties.keySet.asScala.map((key: Any) => key.asInstanceOf[String])
+        .filter((key: String) => key.startsWith("foundry.spark.session"))
+      tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
+    }
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
