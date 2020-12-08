@@ -27,6 +27,7 @@ import scala.collection.Map
 import scala.collection.mutable
 import scala.collection.mutable.{HashMap, HashSet, ListBuffer}
 import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
 import org.apache.spark._
@@ -1002,13 +1003,12 @@ private[spark] class DAGScheduler(
       callSite: CallSite,
       listener: JobListener,
       properties: Properties): Unit = {
-    val foundryBearerTokenKey: String =
-    "foundry.spark.session.bearerToken"
-    val foundryTemporaryAuthCredentialsKey: String =
-    "foundry.spark.session.temporaryCredentialsAuthToken"
     var finalStage: ResultStage = null
-    copyFromPropertiesToActiveContextLocalProperties(properties, foundryBearerTokenKey)
-    copyFromPropertiesToActiveContextLocalProperties(properties, foundryTemporaryAuthCredentialsKey)
+    val tokenKeys = properties.keySet.asScala.map(
+      (key: Any) => key.asInstanceOf[String])
+      .filter((key: String) => key.startsWith("foundry.spark.session"))
+    tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
+
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
