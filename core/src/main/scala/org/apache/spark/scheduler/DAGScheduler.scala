@@ -1004,11 +1004,7 @@ private[spark] class DAGScheduler(
       listener: JobListener,
       properties: Properties): Unit = {
     var finalStage: ResultStage = null
-    if (properties != null) {
-      val tokenKeys = properties.keySet.asScala.map((key: Any) => key.asInstanceOf[String])
-        .filter((key: String) => key.startsWith("foundry.spark.session"))
-      tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
-    }
+    forceFoundryAuthIfEnabled(properties)
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
@@ -1065,6 +1061,20 @@ private[spark] class DAGScheduler(
     listenerBus.post(
       SparkListenerJobStart(job.jobId, jobSubmissionTime, stageInfos, properties))
     submitStage(finalStage)
+  }
+
+  private def forceFoundryAuthIfEnabled(properties: Properties) = {
+    val foundrySparkSessionPrefix = "foundry.spark.session"
+    val shouldCopyAuthTokensKey = foundrySparkSessionPrefix + ".shouldForceAuthorize"
+    if (properties != null
+      && properties.containsKey(shouldCopyAuthTokensKey)
+      && properties.getProperty(shouldCopyAuthTokensKey).equals("true")) {
+      val tokenKeys = properties.keySet.asScala.map((key: Any) => key.asInstanceOf[String])
+        .filter((key: String) => {
+          key.startsWith(foundrySparkSessionPrefix)
+        })
+      tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
+    }
   }
 
   private def copyFromPropertiesToActiveContextLocalProperties(
