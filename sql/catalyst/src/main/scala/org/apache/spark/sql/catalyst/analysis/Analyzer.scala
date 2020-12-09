@@ -2570,7 +2570,7 @@ object CleanupAliases extends Rule[LogicalPlan] {
         exprId = a.exprId,
         qualifier = a.qualifier,
         explicitMetadata = Some(a.metadata),
-        deniedMetadataKeys = a.deniedMetadataKeys)
+        nonInheritableMetadataKeys = a.nonInheritableMetadataKeys)
     case a: MultiAlias =>
       a.copy(child = trimAliases(a.child))
     case other => trimAliases(other)
