@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql
 
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.internal.SQLConf
@@ -121,9 +120,4 @@ class TPCDSQueryWithStatsSuite extends TPCDSQuerySuite {
     SQLConf.PLAN_STATS_ENABLED.key -> "true",
     SQLConf.JOIN_REORDER_ENABLED.key -> "true"
   )
-}
-
-class TPCDSQueryANSISuite extends TPCDSQuerySuite {
-  override protected def sparkConf: SparkConf =
-    super.sparkConf.set(SQLConf.ANSI_ENABLED, true)
 }
