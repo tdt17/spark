@@ -177,7 +177,7 @@ private[joins] class UnsafeHashedRelation(
   }
 
   override def keys(): Iterator[InternalRow] = {
-    val iter = binaryMap.iterator()
+    val iter = binaryMap.safeIterator()
 
     new Iterator[InternalRow] {
       val unsafeRow = new UnsafeRow(numKeys)

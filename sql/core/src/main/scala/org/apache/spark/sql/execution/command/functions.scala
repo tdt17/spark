@@ -88,9 +88,7 @@ case class CreateFunctionCommand(
       } else {
         // For a permanent, we will store the metadata into underlying external catalog.
         // This function will be loaded into the FunctionRegistry when a query uses it.
-        // We do not load it into FunctionRegistry right now, to avoid loading the resource and
-        // UDF class immediately, as the Spark application to create the function may not have
-        // access to the resource and/or UDF class.
+        // We do not load it into FunctionRegistry right now.
         catalog.createFunction(func, ignoreIfExists)
       }
     }

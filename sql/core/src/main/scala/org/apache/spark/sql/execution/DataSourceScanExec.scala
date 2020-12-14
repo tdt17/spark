@@ -175,7 +175,7 @@ case class FileSourceScanExec(
 
   private lazy val needsUnsafeRowConversion: Boolean = {
     if (relation.fileFormat.isInstanceOf[ParquetSource]) {
-      sqlContext.conf.parquetVectorizedReaderEnabled
+      SparkSession.getActiveSession.get.sessionState.conf.parquetVectorizedReaderEnabled
     } else {
       false
     }
@@ -209,6 +209,9 @@ case class FileSourceScanExec(
     val ret =
       relation.location.listFiles(
         partitionFilters.filterNot(isDynamicPruningFilter), dataFilters)
+    if (relation.partitionSchemaOption.isDefined) {
+      driverMetrics("numPartitions") = ret.length
+    }
     setFilesNumAndSizeMetric(ret, true)
     val timeTakenMs = NANOSECONDS.toMillis(
       (System.nanoTime() - startTime) + optimizerMetadataTimeNs)
@@ -430,16 +433,15 @@ case class FileSourceScanExec(
       driverMetrics("staticFilesNum") = filesNum
       driverMetrics("staticFilesSize") = filesSize
     }
-    if (relation.partitionSchemaOption.isDefined) {
-      driverMetrics("numPartitions") = partitions.length
-    }
   }
 
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
     "numFiles" -> SQLMetrics.createMetric(sparkContext, "number of files read"),
     "metadataTime" -> SQLMetrics.createTimingMetric(sparkContext, "metadata time"),
-    "filesSize" -> SQLMetrics.createSizeMetric(sparkContext, "size of files read")
+    "filesSize" -> SQLMetrics.createSizeMetric(sparkContext, "size of files read"),
+    "pruningTime" ->
+      SQLMetrics.createTimingMetric(sparkContext, "dynamic partition pruning time")
   ) ++ {
     // Tracking scan time has overhead, we can't afford to do it for each row, and can only do
     // it for each batch.
@@ -450,12 +452,9 @@ case class FileSourceScanExec(
     }
   } ++ {
     if (relation.partitionSchemaOption.isDefined) {
-      Map(
-        "numPartitions" -> SQLMetrics.createMetric(sparkContext, "number of partitions read"),
-        "pruningTime" ->
-          SQLMetrics.createTimingMetric(sparkContext, "dynamic partition pruning time"))
+      Some("numPartitions" -> SQLMetrics.createMetric(sparkContext, "number of partitions read"))
     } else {
-      Map.empty[String, SQLMetric]
+      None
     }
   } ++ staticMetrics
 
