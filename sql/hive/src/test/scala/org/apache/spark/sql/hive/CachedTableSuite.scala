@@ -22,7 +22,7 @@ import java.io.File
 import org.apache.spark.sql.{AnalysisException, Dataset, QueryTest, SaveMode}
 import org.apache.spark.sql.catalyst.parser.ParseException
 import org.apache.spark.sql.execution.columnar.InMemoryTableScanExec
-import org.apache.spark.sql.execution.datasources.{CatalogFileIndex, HadoopFsRelation, HiveCatalogFileIndex, LogicalRelation}
+import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.test.SQLTestUtils
