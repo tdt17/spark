@@ -90,11 +90,6 @@ public final class UnsafeSorterSpillReader extends UnsafeSorterIterator implemen
   }
 
   @Override
-  public long getCurrentPageNumber() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public boolean hasNext() {
     return (numRecordsRemaining > 0);
   }
