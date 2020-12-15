@@ -22,14 +22,13 @@ import java.util.concurrent.{ConcurrentHashMap, LinkedBlockingQueue, ThreadPoolE
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.palantir.logsafe.SafeArg
+import org.apache.commons.io.output.{ByteArrayOutputStream => ApacheByteArrayOutputStream}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{HashMap, ListBuffer, Map}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
-
-import org.apache.commons.io.output.{ByteArrayOutputStream => ApacheByteArrayOutputStream}
 
 import org.apache.spark.broadcast.{Broadcast, BroadcastManager}
 import org.apache.spark.internal.{Logging, SafeLogging}
