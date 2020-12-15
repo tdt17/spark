@@ -1240,8 +1240,7 @@ setMethod("collect",
                     arrowTable <- arrow::read_arrow(readRaw(conn))
                   }
                   as.data.frame(arrowTable, stringsAsFactors = stringsAsFactors)
-                },
-                finally = {
+                }, finally = {
                   close(conn)
                 })
                 return(output)
