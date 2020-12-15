@@ -375,13 +375,13 @@ class StreamingContextSuite
     addInputStream(ssc).register()
     ssc.start()
 
-    val sources = ssc.env.metricsSystem.getSources
+    val sources = StreamingContextSuite.getSources(ssc.env.metricsSystem)
     val streamingSource = StreamingContextSuite.getStreamingSource(ssc)
     assert(sources.contains(streamingSource))
     assert(ssc.getState() === StreamingContextState.ACTIVE)
 
     ssc.stop()
-    val sourcesAfterStop = ssc.env.metricsSystem.getSources
+    val sourcesAfterStop = StreamingContextSuite.getSources(ssc.env.metricsSystem)
     val streamingSourceAfterStop = StreamingContextSuite.getStreamingSource(ssc)
     assert(ssc.getState() === StreamingContextState.STOPPED)
     assert(!sourcesAfterStop.contains(streamingSourceAfterStop))
@@ -1027,6 +1027,10 @@ object testPackage extends Assertions {
  * This includes methods to access private methods and fields in StreamingContext and MetricsSystem
  */
 private object StreamingContextSuite extends PrivateMethodTester {
+  private val _sources = PrivateMethod[ArrayBuffer[Source]](Symbol("sources"))
+  private def getSources(metricsSystem: MetricsSystem): ArrayBuffer[Source] = {
+    metricsSystem.invokePrivate(_sources())
+  }
   private val _streamingSource = PrivateMethod[StreamingSource](Symbol("streamingSource"))
   private def getStreamingSource(streamingContext: StreamingContext): StreamingSource = {
     streamingContext.invokePrivate(_streamingSource())
