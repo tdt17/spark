@@ -76,17 +76,19 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
 
   private def formatMasterResourcesInUse(aliveWorkers: Array[WorkerInfo]): String = {
     val totalInfo = aliveWorkers.map(_.resourcesInfo)
+      .map(resources => toMutable(resources))
       .flatMap(_.toIterator)
       .groupBy(_._1) // group by resource name
       .map { case (rName, rInfoArr) =>
-      rName -> rInfoArr.map(_._2.addresses.size).sum
-    }
+        rName -> rInfoArr.map(_._2).reduce(_ + _)
+      }.map { case (k, v) => (k, v.toResourceInformation) }
     val usedInfo = aliveWorkers.map(_.resourcesInfoUsed)
+      .map (resources => toMutable(resources))
       .flatMap(_.toIterator)
       .groupBy(_._1) // group by resource name
       .map { case (rName, rInfoArr) =>
-      rName -> rInfoArr.map(_._2.addresses.size).sum
-    }
+      rName -> rInfoArr.map(_._2).reduce(_ + _)
+    }.map { case (k, v) => (k, v.toResourceInformation) }
     formatResourcesUsed(totalInfo, usedInfo)
   }
 

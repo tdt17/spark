@@ -2579,21 +2579,6 @@ class SQLQuerySuite extends QueryTest with SharedSparkSession with AdaptiveSpark
     assert(numRecordsRead.value === 10)
   }
 
-  test("SPARK-18079: CollectLimitExec.executeToIterator should perform per-partition limits") {
-    val numRecordsRead = spark.sparkContext.longAccumulator
-    val iter = spark.range(1, 100, 1, numPartitions = 10).map { x =>
-      numRecordsRead.add(1)
-      x
-    }.limit(1).toLocalIterator()
-    var localCount = 0
-    while (iter.hasNext) {
-      iter.next()
-      localCount += 1
-    }
-    assert(numRecordsRead.value === 1)
-    assert(localCount === 1)
-  }
-
   test("CREATE TABLE USING should not fail if a same-name temp view exists") {
     withTable("same_name") {
       withTempView("same_name") {
@@ -3515,13 +3500,6 @@ class SQLQuerySuite extends QueryTest with SharedSparkSession with AdaptiveSpark
       .createOrReplaceTempView("C")
     checkAnswer(sql("SELECT 0 FROM ( SELECT * FROM B JOIN C USING (id)) " +
       "JOIN ( SELECT * FROM B JOIN C USING (id)) USING (id)"), Row(0))
-  }
-
-  test("SPARK-32788: non-partitioned table scan should not have partition filter") {
-    withTable("t") {
-      spark.range(1).write.saveAsTable("t")
-      checkAnswer(sql("SELECT id FROM t WHERE (SELECT true)"), Row(0L))
-    }
   }
 }
 
