@@ -104,7 +104,7 @@ object PhysicalOperation extends OperationHelper with PredicateHelper {
         val (_, filters, other, aliases) = collectProjectsAndFilters(child)
         if (hasOversizedRepeatedAliases(fields, aliases)) {
           // Skip substitution if it could overly increase the overall tree size and risk OOMs
-          (None, Nil, plan, AttributeMap.empty)
+          (None, Nil, plan, AttributeMap(Nil))
         } else {
           val substitutedFields = fields.map(substitute(aliases)).asInstanceOf[Seq[NamedExpression]]
           (Some(substitutedFields), filters, other, collectAliases(substitutedFields))
