@@ -121,19 +121,6 @@ trait AnalysisHelper extends QueryPlan[LogicalPlan] { self: LogicalPlan =>
   }
 
   /**
-   * A variant of `transformUpWithNewOutput`, which skips touching already analyzed plan.
-   */
-  def resolveOperatorsUpWithNewOutput(
-      rule: PartialFunction[LogicalPlan, (LogicalPlan, Seq[(Attribute, Attribute)])])
-  : LogicalPlan = {
-    if (!analyzed) {
-      transformUpWithNewOutput(rule, skipCond = _.analyzed)
-    } else {
-      self
-    }
-  }
-
-  /**
    * Recursively transforms the expressions of a tree, skipping nodes that have already
    * been analyzed.
    */
