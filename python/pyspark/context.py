@@ -212,7 +212,7 @@ class SparkContext(object):
         # scala's mangled names w/ $ in them require special treatment.
         self._encryption_enabled = self._jvm.PythonUtils.isEncryptionEnabled(self._jsc)
 
-        self.pythonExec = os.environ.get("PYSPARK_PYTHON", 'python')
+        self.pythonExec = self._jvm.scala.Option.apply(os.environ.get("PYSPARK_PYTHON"))
         self.pythonVer = "%d.%d" % sys.version_info[:2]
 
         if sys.version_info < (3, 6):
