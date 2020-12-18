@@ -692,7 +692,6 @@ private[spark] class Executor(
               try {
                 val ef = new ExceptionFailure(t, accUpdates).withAccums(accums)
                   .withMetricPeaks(metricPeaks)
-                ser.serialize(ef)
                 (ef, ser.serialize(ef))
               } catch {
                 case _: NotSerializableException =>
