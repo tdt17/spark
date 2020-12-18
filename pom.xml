@@ -158,8 +158,6 @@
     <chill.version>0.9.5</chill.version>
     <ivy.version>2.4.0</ivy.version>
     <oro.version>2.0.8</oro.version>
-    <dropwizard.metrics.version>3.2.6</dropwizard.metrics.version>
-    <dropwizard.version>1.0.0</dropwizard.version>
     <!--
     If you changes codahale.metrics.version, you also need to change
     the link to metrics.dropwizard.io in docs/monitoring.md.
@@ -807,32 +805,27 @@
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>${dropwizard.metrics.version}</version>
+        <version>${codahale.metrics.version}</version>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-jvm</artifactId>
-        <version>${dropwizard.metrics.version}</version>
+        <version>${codahale.metrics.version}</version>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-json</artifactId>
-        <version>${dropwizard.metrics.version}</version>
+        <version>${codahale.metrics.version}</version>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
         <artifactId>metrics-graphite</artifactId>
-        <version>${dropwizard.metrics.version}</version>
+        <version>${codahale.metrics.version}</version>
       </dependency>
-<!--      <dependency>-->
-<!--        <groupId>io.dropwizard.metrics</groupId>-->
-<!--        <artifactId>metrics-jmx</artifactId>-->
-<!--        <version>${dropwizard.metrics.version}</version>-->
-<!--      </dependency>-->
       <dependency>
-        <groupId>io.dropwizard</groupId>
-        <artifactId>dropwizard-metrics</artifactId>
-        <version>${dropwizard.version}</version>
+        <groupId>io.dropwizard.metrics</groupId>
+        <artifactId>metrics-jmx</artifactId>
+        <version>${codahale.metrics.version}</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
