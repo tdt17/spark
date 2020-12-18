@@ -186,7 +186,7 @@ class ParquetInteroperabilitySuite extends ParquetCompatibilityTest with SharedS
                 // assert makes sure this holds even if we change parquet versions (if eg. there
                 // were ever statistics even on unsigned columns).
 
-                // Note: This is not true in palantir/parquet-mr and statistics are always returned
+                // TODO(palantir), note: This is not true in palantir/parquet-mr and statistics are always returned
                 // and they are always unsigned.
                 assert(oneFooter.getFileMetaData.getCreatedBy.contains("impala") ^
                   oneBlockColumnMeta.getStatistics.hasNonNullValue)
