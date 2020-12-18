@@ -15,8 +15,6 @@
 # limitations under the License.
 #
 
-from __future__ import print_function
-
 import os
 import shutil
 import signal
@@ -214,7 +212,7 @@ class SparkContext(object):
         # scala's mangled names w/ $ in them require special treatment.
         self._encryption_enabled = self._jvm.PythonUtils.isEncryptionEnabled(self._jsc)
 
-        self.pythonExec = self._jvm.scala.Option.apply(os.environ.get("PYSPARK_PYTHON"))
+        self.pythonExec = os.environ.get("PYSPARK_PYTHON", 'python')
         self.pythonVer = "%d.%d" % sys.version_info[:2]
 
         if sys.version_info < (3, 6):

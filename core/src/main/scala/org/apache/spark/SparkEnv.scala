@@ -17,7 +17,7 @@
 
 package org.apache.spark
 
-import java.io.{DataOutputStream, File, IOException}
+import java.io.File
 import java.net.Socket
 import java.util.Locale
 
