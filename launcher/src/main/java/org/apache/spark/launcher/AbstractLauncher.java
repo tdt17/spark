@@ -274,7 +274,7 @@ public abstract class AbstractLauncher<T extends AbstractLauncher<T>> {
   public abstract SparkAppHandle startApplication(SparkAppHandle.Listener... listeners)
     throws IOException;
 
-  protected abstract T self();
+  abstract T self();
 
   private static class ArgumentValidator extends SparkSubmitOptionParser {
 

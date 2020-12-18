@@ -77,7 +77,7 @@ public class InProcessLauncher extends AbstractLauncher<InProcessLauncher> {
   }
 
   @Override
-  protected InProcessLauncher self() {
+  InProcessLauncher self() {
     return this;
   }
 
