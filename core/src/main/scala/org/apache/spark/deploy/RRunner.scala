@@ -18,8 +18,7 @@
 package org.apache.spark.deploy
 
 import java.io._
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Semaphore, TimeUnit}
 
 import scala.collection.JavaConverters._
 
@@ -31,6 +30,7 @@ import org.apache.spark.api.r.{RBackend, RUtils}
 import org.apache.spark.deploy.Common.Provenance
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config.R._
+import org.apache.spark.internal.config.SUBMIT_DEPLOY_MODE
 import org.apache.spark.util.RedirectThread
 
 /**
@@ -50,7 +50,7 @@ object RRunner extends CondaRunner with Logging {
     val backendTimeout = sys.env.getOrElse("SPARKR_BACKEND_TIMEOUT", "120").toInt
 
     val presetRCommand = {
-      val driverPreset = if (sys.props.getOrElse("spark.submit.deployMode", "client") == "client") {
+      val driverPreset = if (sys.props.getOrElse(SUBMIT_DEPLOY_MODE.key, "client") == "client") {
         Provenance.fromConf("spark.r.driver.command")
       } else {
         None
