@@ -199,17 +199,6 @@ private[spark] object KubernetesUtils extends Logging {
     if (time != null) time else "N/A"
   }
 
-  def submitterLocalFiles(fileUris: Iterable[String]): Iterable[String] = {
-    fileUris
-      .map(Utils.resolveURI)
-      .filter { file =>
-        Option(file.getScheme).getOrElse("file") == "file"
-      }
-      .map(_.getPath)
-      .map(new File(_))
-      .map(_.getAbsolutePath)
-  }
-
   /**
    * Generates a unique ID to be used as part of identifiers. The returned ID is a hex string
    * of a 64-bit value containing the 40 LSBs from the current time + 24 random bits from a
