@@ -23,7 +23,6 @@ import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
 import scala.collection.Map
 import scala.collection.mutable
 import scala.collection.mutable.{HashMap, HashSet, ListBuffer}
@@ -1063,7 +1062,10 @@ private[spark] class DAGScheduler(
     submitStage(finalStage)
   }
 
-  private def forceFoundryAuthIfEnabled(properties: Properties) = {
+  // TODO(rshkv): Think about this
+  private def forceFoundryAuthIfEnabled(properties: Properties): Unit = {
+    import scala.collection.JavaConverters.asScalaSetConverter
+
     val foundrySparkSessionPrefix = "foundry.spark.session"
     val shouldCopyAuthTokensKey = foundrySparkSessionPrefix + ".shouldForceAuthorize"
     if (properties != null
@@ -1074,14 +1076,6 @@ private[spark] class DAGScheduler(
           key.startsWith(foundrySparkSessionPrefix)
         })
       tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
-    }
-  }
-
-  private def copyFromPropertiesToActiveContextLocalProperties(
-  properties: Properties,
-  key: String): Unit = {
-    if (properties != null && properties.contains(key)) {
-      sc.setLocalProperty(key, properties.get(key).toString)
     }
   }
 
