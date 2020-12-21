@@ -167,7 +167,7 @@ abstract class BaseYarnClusterSuite
 
     val handle = launcher.startApplication()
     try {
-      // palantir/spark needs a larger timeout because we're testing Conda setup
+      // TODO(palantir): Needs a larger timeout because we're testing Conda setup
       eventually(timeout(5.minutes), interval(1.second)) {
         assert(handle.getState().isFinal())
       }
