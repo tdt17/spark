@@ -198,8 +198,6 @@
     <!-- org.apache.commons/commons-lang3/-->
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-compress.version>1.18</commons-compress.version>
-    <commons-pool.version>1.6</commons-pool.version>
-
     <!-- org.apache.commons/commons-pool2/-->
     <commons-pool2.version>2.6.2</commons-pool2.version>
     <datanucleus-core.version>4.1.17</datanucleus-core.version>
@@ -214,7 +212,6 @@
     <jsr305.version>3.0.2</jsr305.version>
     <libthrift.version>0.12.0</libthrift.version>
     <antlr4.version>4.7.1</antlr4.version>
-    <antlr.version>3.4</antlr.version>
     <jpam.version>1.1</jpam.version>
     <selenium.version>2.52.0</selenium.version>
     <htmlunit.version>2.22</htmlunit.version>
@@ -571,11 +568,6 @@
             <artifactId>jakarta.activation-api</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>commons-pool</groupId>
-        <artifactId>commons-pool</artifactId>
-        <version>${commons-pool.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -2478,11 +2470,6 @@
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-runtime</artifactId>
         <version>${antlr4.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.antlr</groupId>
-        <artifactId>antlr-runtime</artifactId>
-        <version>${antlr.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
