@@ -2453,6 +2453,7 @@ object SQLConf {
       .version("3.0.0")
       .stringConf
       .createWithDefault(
+        "http://dl.bintray.com/palantir/releases," +
         "https://maven-central.storage-download.googleapis.com/maven2/")
 
   val LEGACY_FROM_DAYTIME_STRING =
