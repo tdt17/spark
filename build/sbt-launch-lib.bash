@@ -117,7 +117,7 @@ get_mem_opts () {
   (( $codecache > 128 )) || codecache=128
   (( $codecache < 2048 )) || codecache=2048
 
-  echo "-Xms${mem}m -Xmx${mem}m -XX:ReservedCodeCacheSize=${codecache}m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heap.bin"
+  echo "-Xms${mem}m -Xmx${mem}m -XX:ReservedCodeCacheSize=${codecache}m"
 }
 
 require_arg () {
