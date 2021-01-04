@@ -1,6 +1,6 @@
-# Palantir distribution of Apache Spark
+# Palantir Distribution of Apache Spark
 
-[ ![Download](https://api.bintray.com/packages/palantir/releases/spark/images/download.svg) ](https://bintray.com/palantir/releases/spark/_latestVersion)
+[![Download](https://api.bintray.com/packages/palantir/releases/spark/images/download.svg)](https://bintray.com/palantir/releases/spark/_latestVersion)
 
 This repository, located at https://github.com/palantir/spark, contains a fork of Apache Spark.  It includes a number of changes that are not yet on the Apache master branch that are useful at Palantir.
 
@@ -123,9 +123,3 @@ in the online documentation for an overview on how to configure Spark.
 
 Please review the [Contribution to Spark guide](https://spark.apache.org/contributing.html)
 for information on how to get started contributing to the project.
-
-## Developing with IntelliJ
-
-1. Open the root `pom.xml` in IntelliJ and select `Open as Project`.
-2. Make sure that the Java SDK is 1.8 (Right click on root project: `Open Module Settings > Project Settings > Project > Project SDK = 1.8`).
-3. Make sure that Scala compilation is set to "Java then Scala" (`Preferences > Build, Execution, Deployment > Compiler > Scala Compiler > Scala Comiple Server > Compile order = Java then Scala`).
