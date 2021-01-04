@@ -17,17 +17,21 @@
 # limitations under the License.
 #
 
-from build_environment import get_build_environment
-from test_functions import *
+import importlib
 
+from build_environment import get_build_environment
+
+
+tests = importlib.import_module("run-tests")
 
 if __name__ == '__main__':
     env = get_build_environment()
+    extra_profiles = tests.get_hadoop_profiles(env.hadoop_version)
 
     # ensure we have run the spark build
-    build_apache_spark(env.build_tool, env.hadoop_version)
+    tests.build_apache_spark(env.build_tool, extra_profiles)
 
     # backwards compatibility checks
     if env.build_tool == "sbt":
         # Note: compatibility tests only supported in sbt for now
-        detect_binary_inop_with_mima(env.hadoop_version)
+        tests.detect_binary_inop_with_mima(extra_profiles)
