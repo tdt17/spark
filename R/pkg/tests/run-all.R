@@ -29,7 +29,10 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
 
   # Setup global test environment
   # Install Spark first to set SPARK_HOME
-  install.spark()
+
+  # NOTE(shivaram): We set overwrite to handle any old tar.gz files or directories left behind on
+  # CRAN machines. For Jenkins we should already have SPARK_HOME set.
+  install.spark(overwrite = TRUE)
 
   sparkRDir <- file.path(Sys.getenv("SPARK_HOME"), "R")
   sparkRWhitelistSQLDirs <- c("spark-warehouse", "metastore_db")
@@ -52,29 +55,32 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
   }
 
   if (identical(Sys.getenv("NOT_CRAN"), "true")) {
+    # set random seed for predictable results. mostly for base's sample() in tree and classification
+    set.seed(42)
+
     if (identical(Sys.getenv("CONDA_TESTS"), "true")) {
         summaryReporter <- ProgressReporter$new()
         options(testthat.output_file = "target/R/R/conda/r-tests.xml")
         junitReporter <- JunitReporter$new()
-        # set random seed for predictable results. mostly for base's sample() in tree and classification
-        set.seed(42)
-        testthat:::test_package_dir("SparkR",
-        file.path(sparkRDir, "pkg", "tests", "condatests"),
-        NULL,
-        MultiReporter$new(reporters = list(summaryReporter, junitReporter)))
+        testthat:::test_package_dir(
+            "SparkR",
+            file.path(sparkRDir, "pkg", "tests", "condatests"),
+            NULL,
+            MultiReporter$new(reporters = list(summaryReporter, junitReporter)))
     } else {
         summaryReporter <- ProgressReporter$new()
         options(testthat.output_file = "target/R/R/r-tests.xml")
         junitReporter <- JunitReporter$new()
         reporter <- MultiReporter$new(reporters = list(summaryReporter, junitReporter))
-        # set random seed for predictable results. mostly for base's sample() in tree and classification
         test_package("SparkR", reporter = reporter)
-        set.seed(42)
-        testthat:::test_package_dir("SparkR",
-        file.path(sparkRDir, "pkg", "tests", "fulltests"),
-        NULL,
-        reporter)
+        testthat:::test_package_dir(
+            "SparkR",
+            file.path(sparkRDir, "pkg", "tests", "fulltests"),
+            NULL,
+            reporter)
     }
   }
+
+  SparkR:::uninstallDownloadedSpark()
 
 }
