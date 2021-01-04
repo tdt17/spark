@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,10 +17,12 @@
 # limitations under the License.
 #
 
-from __future__ import print_function
+import importlib
 
-from test_functions import *
 from build_environment import get_build_environment, modules_to_test
+
+
+tests = importlib.import_module("run-tests")
 
 
 if __name__ == '__main__':
@@ -35,20 +37,20 @@ if __name__ == '__main__':
     if not changed_files or any(f.endswith(".scala")
                                 or f.endswith("scalastyle-config.xml")
                                 for f in changed_files):
-        run_scala_style_checks()
+        tests.run_scala_style_checks(extra_profiles=[])
     if not changed_files or any(f.endswith(".java")
                                 or f.endswith("checkstyle.xml")
                                 or f.endswith("checkstyle-suppressions.xml")
                                 for f in changed_files):
-        run_java_style_checks()
+        tests.run_java_style_checks(build_profiles=[])
         pass
     if not changed_files or any(f.endswith("lint-python")
                                 or f.endswith("tox.ini")
                                 or f.endswith(".py")
                                 for f in changed_files):
-        run_python_style_checks()
+        tests.run_python_style_checks()
     if not changed_files or any(f.endswith(".R")
                                 or f.endswith("lint-r")
                                 or f.endswith(".lintr")
                                 for f in changed_files):
-        run_sparkr_style_checks()
+        tests.run_sparkr_style_checks()
