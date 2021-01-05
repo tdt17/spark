@@ -173,6 +173,6 @@ univocity-parsers/2.9.0//univocity-parsers-2.9.0.jar
 woodstox-core/5.0.3//woodstox-core-5.0.3.jar
 xbean-asm7-shaded/4.15//xbean-asm7-shaded-4.15.jar
 xmlenc/0.52//xmlenc-0.52.jar
-xz/1.8//xz-1.8.jar
+xz/1.5//xz-1.5.jar
 zookeeper/3.4.14//zookeeper-3.4.14.jar
 zstd-jni/1.4.4-3//zstd-jni-1.4.4-3.jar
