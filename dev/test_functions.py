@@ -47,11 +47,11 @@ def modules_to_test(env):
     changed_files = None
     if env.test_env == "amplab_jenkins" and os.environ.get("AMP_JENKINS_PRB"):
         target_branch = os.environ["ghprbTargetBranch"]
-        changed_files = identify_changed_files_from_git_commits("HEAD", target_branch=target_branch)
-        changed_modules = determine_modules_for_files(changed_files)
-        excluded_tags = determine_tags_to_exclude(changed_modules)
+        changed_files = functions.identify_changed_files_from_git_commits("HEAD", target_branch=target_branch)
+        changed_modules = functions.determine_modules_for_files(changed_files)
+        excluded_tags = functions.determine_tags_to_exclude(changed_modules)
     if not changed_modules:
-        changed_modules = [modules.root]
+        changed_modules = [functions.modules.root]
         excluded_tags = []
     print("[info] Found the following changed modules:",
           ", ".join(x.name for x in changed_modules))
@@ -63,10 +63,10 @@ def modules_to_test(env):
     test_environ = {}
     for m in changed_modules:
         test_environ.update(m.environ)
-    setup_test_environ(test_environ)
+    functions.setup_test_environ(test_environ)
 
     fields = {
-        'test_modules': determine_modules_to_test(changed_modules),
+        'test_modules': functions.determine_modules_to_test(changed_modules),
         'changed_files': changed_files,  # Used in run-style-checks.py
         'excluded_tags': excluded_tags
     }
