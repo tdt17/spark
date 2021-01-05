@@ -193,8 +193,6 @@
     <!-- org.apache.commons/commons-pool2/-->
     <commons-pool2.version>2.6.2</commons-pool2.version>
     <datanucleus-core.version>4.1.17</datanucleus-core.version>
-    <objenesis.version>2.6</objenesis.version>
-
     <guava.version>14.0.1</guava.version>
     <janino.version>3.0.16</janino.version>
     <jersey.version>2.30</jersey.version>
@@ -482,11 +480,6 @@
         <artifactId>jetty-webapp</artifactId>
         <version>${jetty.version}</version>
         <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.objenesis</groupId>
-        <artifactId>objenesis</artifactId>
-        <version>${objenesis.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
