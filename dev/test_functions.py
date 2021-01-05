@@ -47,7 +47,8 @@ def modules_to_test(env):
     changed_files = None
     if env.test_env == "amplab_jenkins" and os.environ.get("AMP_JENKINS_PRB"):
         target_branch = os.environ["ghprbTargetBranch"]
-        changed_files = functions.identify_changed_files_from_git_commits("HEAD", target_branch=target_branch)
+        changed_files = functions \
+            .identify_changed_files_from_git_commits("HEAD", target_branch=target_branch)
         changed_modules = functions.determine_modules_for_files(changed_files)
         excluded_tags = functions.determine_tags_to_exclude(changed_modules)
     if not changed_modules:
