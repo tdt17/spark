@@ -58,21 +58,19 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
     # set random seed for predictable results. mostly for base's sample() in tree and classification
     set.seed(42)
 
+    reporter <- MultiReporter$new(list(
+        SummaryReporter$new(),
+        JunitReporter$new()
+    ))
+
     if (identical(Sys.getenv("CONDA_TESTS"), "true")) {
         test_path <- file.path(sparkRDir, "pkg", "tests", "condatests")
         options(testthat.output_file = "target/R/R/conda/r-tests.xml")
-
-        summaryReporter <- ProgressReporter$new()
-        junitReporter <- JunitReporter$new()
-        reporter <- MultiReporter$new(reporters = list(summaryReporter, junitReporter))
     } else {
         test_path <- file.path(sparkRDir, "pkg", "tests", "fulltests")
         options(testthat.output_file = "target/R/R/r-tests.xml")
-        test_package("SparkR", reporter = reporter)
 
-        summaryReporter <- ProgressReporter$new()
-        junitReporter <- JunitReporter$new()
-        reporter <- MultiReporter$new(reporters = list(summaryReporter, junitReporter))
+        test_package("SparkR", reporter = reporter)
     }
 
     test_runner <- testthat:::test_package_dir
