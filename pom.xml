@@ -200,7 +200,6 @@
     <!-- org.apache.commons/commons-pool2/-->
     <commons-pool2.version>2.6.2</commons-pool2.version>
     <datanucleus-core.version>4.1.17</datanucleus-core.version>
-    <javax-activation.version>1.1.1</javax-activation.version>
     <objenesis.version>2.6</objenesis.version>
 
     <guava.version>14.0.1</guava.version>
@@ -1344,7 +1343,7 @@
       <dependency>
         <groupId>javax.activation</groupId>
         <artifactId>activation</artifactId>
-        <version>${javax-activation.version}</version>
+        <version>1.1.1</version>
         <scope>${hadoop.deps.scope}</scope>
       </dependency>
       <dependency>
