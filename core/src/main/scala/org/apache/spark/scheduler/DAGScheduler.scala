@@ -23,6 +23,7 @@ import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.tailrec
+import scala.collection.JavaConverters._
 import scala.collection.Map
 import scala.collection.mutable
 import scala.collection.mutable.{HashMap, HashSet, ListBuffer}
@@ -1062,19 +1063,13 @@ private[spark] class DAGScheduler(
     submitStage(finalStage)
   }
 
-  // TODO(rshkv): Think about this
   private def forceFoundryAuthIfEnabled(properties: Properties): Unit = {
-    import scala.collection.JavaConverters.asScalaSetConverter
-
-    val foundrySparkSessionPrefix = "foundry.spark.session"
-    val shouldCopyAuthTokensKey = foundrySparkSessionPrefix + ".shouldForceAuthorize"
-    if (properties != null
-      && properties.containsKey(shouldCopyAuthTokensKey)
-      && properties.getProperty(shouldCopyAuthTokensKey).equals("true")) {
+    // clear any existing local properties
+    sc.getLocalProperties.keySet().asScala
+      .foreach((key: Any) => sc.setLocalProperty(key.asInstanceOf[String], null))
+    // slam in inherited properties
+    if (properties != null) {
       val tokenKeys = properties.keySet.asScala.map((key: Any) => key.asInstanceOf[String])
-        .filter((key: String) => {
-          key.startsWith(foundrySparkSessionPrefix)
-        })
       tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
     }
   }
