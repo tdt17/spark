@@ -213,7 +213,6 @@
     <jpam.version>1.1</jpam.version>
     <selenium.version>2.52.0</selenium.version>
     <htmlunit.version>2.22</htmlunit.version>
-    <xz.version>1.8</xz.version>
     <!--
     Managed up from older version from Avro; sync with jackson-module-paranamer dependency version
     -->
@@ -595,11 +594,6 @@
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
         <version>1.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.tukaani</groupId>
-        <artifactId>xz</artifactId>
-        <version>${xz.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.ivy</groupId>
