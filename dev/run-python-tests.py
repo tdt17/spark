@@ -21,7 +21,6 @@ import logging
 import os
 import sys
 
-from build_environment import get_build_environment, modules_to_test
 from sparktestsupport.shellutils import subprocess_check_output
 from test_functions import *
 
