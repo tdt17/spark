@@ -17,18 +17,15 @@
 # limitations under the License.
 #
 
-import importlib
-
 from build_environment import get_build_environment
+from test_functions import *
 
-
-tests = importlib.import_module("run-tests")
 
 if __name__ == '__main__':
     env = get_build_environment()
-    extra_profiles = tests.get_hadoop_profiles(env.hadoop_version)
+    extra_profiles = get_hadoop_profiles(env.hadoop_version)
 
-    tests.build_apache_spark(env.build_tool, extra_profiles)
+    build_apache_spark(env.build_tool, extra_profiles)
 
     if env.build_tool == "sbt":
         # TODO(dsanduleac): since this is required for tests, might as well run it right
@@ -36,4 +33,4 @@ if __name__ == '__main__':
 
         # Since we did not build assembly/package before running dev/mima, we need to
         # do it here because the tests still rely on it; see SPARK-13294 for details.
-        tests.build_spark_assembly_sbt(extra_profiles)
+        build_spark_assembly_sbt(extra_profiles)
