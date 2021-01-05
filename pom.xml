@@ -413,27 +413,6 @@
         <artifactId>chill-java</artifactId>
         <version>${chill.version}</version>
       </dependency>
-
-      <dependency>
-        <groupId>com.squareup.okio</groupId>
-        <artifactId>okio</artifactId>
-        <version>${okio.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>okhttp</artifactId>
-        <version>${okhttp3.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>logging-interceptor</artifactId>
-        <version>${okhttp3.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp</groupId>
-        <artifactId>okhttp</artifactId>
-        <version>${okhttp.version}</version>
-      </dependency>
       <!-- This artifact is a shaded version of ASM 7.x. The POM that was used to produce this
            is at https://github.com/apache/geronimo-xbean/tree/trunk/xbean-asm7-shaded
            For context on why we shade ASM, see SPARK-782 and SPARK-6152. -->
