@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,15 +17,19 @@
 # limitations under the License.
 #
 
-from __future__ import print_function
+import importlib
 import sys
 
-from build_environment import get_build_environment, modules_to_test
-from test_functions import *
+from build_environment import get_build_environment
+
+
+tests = importlib.import_module("run-tests")
+
 
 if __name__ == '__main__':
     env = get_build_environment()
-    build_profiles = get_hadoop_profiles(env.hadoop_version) + modules.root.build_profile_flags
+    build_profiles = tests.get_hadoop_profiles(env.hadoop_version) \
+        + tests.modules.root.build_profile_flags
     args = build_profiles + sys.argv[1:]
     print("Running sbt with arguments: {}".format(args), file=sys.stderr)
-    exec_sbt(args)
+    tests.exec_sbt(args)
