@@ -59,26 +59,27 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
     set.seed(42)
 
     if (identical(Sys.getenv("CONDA_TESTS"), "true")) {
-        summaryReporter <- ProgressReporter$new()
+        test_path <- file.path(sparkRDir, "pkg", "tests", "condatests")
         options(testthat.output_file = "target/R/R/conda/r-tests.xml")
-        junitReporter <- JunitReporter$new()
-        testthat:::test_package_dir(
-            "SparkR",
-            file.path(sparkRDir, "pkg", "tests", "condatests"),
-            NULL,
-            MultiReporter$new(reporters = list(summaryReporter, junitReporter)))
-    } else {
+
         summaryReporter <- ProgressReporter$new()
-        options(testthat.output_file = "target/R/R/r-tests.xml")
         junitReporter <- JunitReporter$new()
         reporter <- MultiReporter$new(reporters = list(summaryReporter, junitReporter))
+    } else {
+        test_path <- file.path(sparkRDir, "pkg", "tests", "fulltests")
+        options(testthat.output_file = "target/R/R/r-tests.xml")
         test_package("SparkR", reporter = reporter)
-        testthat:::test_package_dir(
-            "SparkR",
-            file.path(sparkRDir, "pkg", "tests", "fulltests"),
-            NULL,
-            reporter)
+
+        summaryReporter <- ProgressReporter$new()
+        junitReporter <- JunitReporter$new()
+        reporter <- MultiReporter$new(reporters = list(summaryReporter, junitReporter))
     }
+
+    test_runner <- testthat:::test_package_dir
+    test_runner("SparkR",
+                test_path,
+                NULL,
+                reporter)
   }
 
   SparkR:::uninstallDownloadedSpark()
