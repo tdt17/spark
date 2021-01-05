@@ -17,12 +17,16 @@
 # limitations under the License.
 #
 
+import importlib
 import logging
 import os
+import sys
 
 from build_environment import get_build_environment, modules_to_test
 from sparktestsupport.shellutils import subprocess_check_output
-from test_functions import *
+
+
+tests = importlib.import_module("run-tests")
 
 
 LOGGER = logging.getLogger()
@@ -52,7 +56,7 @@ if __name__ == '__main__':
 
     modules_with_python_tests = [m for m in mtt.test_modules if m.python_test_goals]
     if modules_with_python_tests:
-        run_python_tests(modules_with_python_tests, 8, python_executables_for_run, False)
+        tests.run_python_tests(modules_with_python_tests, 8, python_executables_for_run)
 
         # Packaging tests create a conda environment for each python version
         # We'd like to use the same version that our executables above use
@@ -64,4 +68,4 @@ if __name__ == '__main__':
         ]
         LOGGER.info("Running python packaging tests for following python versions using conda: %s",
                     python_exact_versions)
-        run_python_packaging_tests(use_conda=True, python_versions=python_exact_versions)
+        tests.run_python_packaging_tests(use_conda=True, python_versions=python_exact_versions)
