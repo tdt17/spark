@@ -17,7 +17,6 @@
 # limitations under the License.
 #
 
-from build_environment import get_build_environment, modules_to_test
 from test_functions import *
 
 
