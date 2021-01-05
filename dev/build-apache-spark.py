@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,14 +17,18 @@
 # limitations under the License.
 #
 
-from __future__ import print_function
-from test_functions import *
+import importlib
+
 from build_environment import get_build_environment
+
+
+tests = importlib.import_module("run-tests")
 
 if __name__ == '__main__':
     env = get_build_environment()
+    extra_profiles = tests.get_hadoop_profiles(env.hadoop_version)
 
-    build_apache_spark(env.build_tool, env.hadoop_version)
+    tests.build_apache_spark(env.build_tool, extra_profiles)
 
     if env.build_tool == "sbt":
         # TODO(dsanduleac): since this is required for tests, might as well run it right
@@ -32,4 +36,4 @@ if __name__ == '__main__':
 
         # Since we did not build assembly/package before running dev/mima, we need to
         # do it here because the tests still rely on it; see SPARK-13294 for details.
-        build_spark_assembly_sbt(env.hadoop_version)
+        tests.build_spark_assembly_sbt(extra_profiles)
