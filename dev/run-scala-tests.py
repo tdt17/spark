@@ -26,4 +26,5 @@ if __name__ == '__main__':
     mtt = modules_to_test(env)
 
     # run the test suites
-    run_scala_tests(env.build_tool, extra_profiles, mtt.test_modules, mtt.excluded_tags, included_tags=[])
+    run_scala_tests(
+        env.build_tool, extra_profiles, mtt.test_modules, mtt.excluded_tags, included_tags=[])
