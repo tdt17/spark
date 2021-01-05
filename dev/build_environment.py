@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-from __future__ import print_function
 import os
 from test_functions import \
     identify_changed_files_from_git_commits, \

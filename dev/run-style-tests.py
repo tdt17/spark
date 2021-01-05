@@ -17,12 +17,8 @@
 # limitations under the License.
 #
 
-import importlib
-
 from build_environment import get_build_environment, modules_to_test
-
-
-tests = importlib.import_module("run-tests")
+from test_functions import *
 
 
 if __name__ == '__main__':
@@ -37,20 +33,20 @@ if __name__ == '__main__':
     if not changed_files or any(f.endswith(".scala")
                                 or f.endswith("scalastyle-config.xml")
                                 for f in changed_files):
-        tests.run_scala_style_checks(extra_profiles=[])
+        run_scala_style_checks(extra_profiles=[])
     if not changed_files or any(f.endswith(".java")
                                 or f.endswith("checkstyle.xml")
                                 or f.endswith("checkstyle-suppressions.xml")
                                 for f in changed_files):
-        tests.run_java_style_checks(build_profiles=[])
+        run_java_style_checks(build_profiles=[])
         pass
     if not changed_files or any(f.endswith("lint-python")
                                 or f.endswith("tox.ini")
                                 or f.endswith(".py")
                                 for f in changed_files):
-        tests.run_python_style_checks()
+        run_python_style_checks()
     if not changed_files or any(f.endswith(".R")
                                 or f.endswith("lint-r")
                                 or f.endswith(".lintr")
                                 for f in changed_files):
-        tests.run_sparkr_style_checks()
+        run_sparkr_style_checks()

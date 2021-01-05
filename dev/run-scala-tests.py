@@ -17,17 +17,14 @@
 # limitations under the License.
 #
 
-import importlib
-
 from build_environment import get_build_environment, modules_to_test
+from test_functions import *
 
-
-tests = importlib.import_module("run-tests")
 
 if __name__ == '__main__':
     env = get_build_environment()
-    extra_profiles = tests.get_hadoop_profiles(env.hadoop_version)
+    extra_profiles = get_hadoop_profiles(env.hadoop_version)
     mtt = modules_to_test(env)
 
     # run the test suites
-    tests.run_scala_tests(env.build_tool, extra_profiles, mtt.test_modules, mtt.excluded_tags, included_tags=[])
+    run_scala_tests(env.build_tool, extra_profiles, mtt.test_modules, mtt.excluded_tags, included_tags=[])

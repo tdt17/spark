@@ -17,12 +17,8 @@
 # limitations under the License.
 #
 
-import importlib
-
 from build_environment import get_build_environment, modules_to_test
-
-
-tests = importlib.import_module("run-tests")
+from test_functions import *
 
 
 if __name__ == '__main__':
@@ -30,4 +26,4 @@ if __name__ == '__main__':
     mtt = modules_to_test(env)
 
     if any(m.should_run_r_tests for m in mtt.test_modules):
-        tests.run_sparkr_tests()
+        run_sparkr_tests()

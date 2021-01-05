@@ -17,19 +17,15 @@
 # limitations under the License.
 #
 
-import importlib
 import sys
 
 from build_environment import get_build_environment
-
-
-tests = importlib.import_module("run-tests")
+from test_functions import *
 
 
 if __name__ == '__main__':
     env = get_build_environment()
-    build_profiles = tests.get_hadoop_profiles(env.hadoop_version) \
-        + tests.modules.root.build_profile_flags
+    build_profiles = get_hadoop_profiles(env.hadoop_version) + modules.root.build_profile_flags
     args = build_profiles + sys.argv[1:]
     print("Running sbt with arguments: {}".format(args), file=sys.stderr)
-    tests.exec_sbt(args)
+    exec_sbt(args)
