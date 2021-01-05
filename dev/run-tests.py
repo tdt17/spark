@@ -473,7 +473,7 @@ def run_scala_tests(build_tool, extra_profiles, test_modules, excluded_tags, inc
         run_scala_tests_sbt(test_modules, test_profiles)
 
 
-def run_python_tests(test_modules, parallelism, with_coverage=False):
+def run_python_tests(test_modules, parallelism, python_executables=None, with_coverage=False):
     set_title_and_block("Running PySpark tests", "BLOCK_PYSPARK_UNIT_TESTS")
 
     if with_coverage:
@@ -487,7 +487,10 @@ def run_python_tests(test_modules, parallelism, with_coverage=False):
     command = [os.path.join(SPARK_HOME, "python", script)]
     if test_modules != [modules.root]:
         command.append("--modules=%s" % ','.join(m.name for m in test_modules))
+    if python_executables is not None:
+        command.append("--python-executables={}".format(",".join(python_executables)))
     command.append("--parallelism=%i" % parallelism)
+    command.append("--verbose")
     run_cmd(command)
 
     if with_coverage:
@@ -536,9 +539,14 @@ def post_python_tests_results():
         shutil.rmtree("pyspark-coverage-site")
 
 
-def run_python_packaging_tests():
+def run_python_packaging_tests(use_conda, python_versions=None):
     set_title_and_block("Running PySpark packaging tests", "BLOCK_PYSPARK_PIP_TESTS")
     command = [os.path.join(SPARK_HOME, "dev", "run-pip-tests")]
+    env = dict(os.environ)
+    if python_versions is not None:
+        env["PYTHON_EXECS_IN"] = ";".join(python_versions)
+        if use_conda:
+            env["USE_CONDA"] = "1"
     run_cmd(command)
 
 
