@@ -1064,9 +1064,10 @@ private[spark] class DAGScheduler(
   }
 
   private def forceFoundryAuthIfEnabled(properties: Properties): Unit = {
-    // clear any existing local properties
-    sc.getLocalProperties.keySet().asScala
-      .foreach((key: Any) => sc.setLocalProperty(key.asInstanceOf[String], null))
+    // expect no localproperties
+    if (!sc.getLocalProperties.keySet().isEmpty) {
+      throw new RuntimeException()
+    }
     // slam in inherited properties
     if (properties != null) {
       val tokenKeys = properties.keySet.asScala.map((key: Any) => key.asInstanceOf[String])
