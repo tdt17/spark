@@ -1003,7 +1003,8 @@ private[spark] class DAGScheduler(
       listener: JobListener,
       properties: Properties): Unit = {
     var finalStage: ResultStage = null
-    forceFoundryAuthIfEnabled(properties)
+    // TODO(rshkv): Re-enable this
+    // forceFoundryAuthIfEnabled(properties)
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
