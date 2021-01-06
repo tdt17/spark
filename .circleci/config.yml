@@ -31,6 +31,7 @@ deployable-branches-and-tags: &deployable-branches-and-tags
        - master
        - jc/pt-diff-on-3.0-base
        - jc/rectify-merge-breaks
+       - jc/testing
 
 
 # Step templates
