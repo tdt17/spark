@@ -35,6 +35,7 @@ DISTDIR="$SPARK_HOME/dist"
 MAKE_TGZ=false
 MAKE_PIP=false
 MAKE_R=false
+CLEAN=false
 NAME=none
 MVN="$SPARK_HOME/build/mvn"
 
@@ -43,7 +44,7 @@ function exit_with_usage {
   echo "make-distribution.sh - tool for making binary distributions of Spark"
   echo ""
   echo "usage:"
-  cl_options="[--name] [--tgz] [--pip] [--r] [--mvn <mvn-command>]"
+  cl_options="[--name] [--tgz] [--pip] [--r] [--clean] [--mvn <mvn-command>]"
   echo "make-distribution.sh $cl_options <maven build options>"
   echo "See Spark's \"Building Spark\" doc for correct Maven options."
   echo ""
@@ -61,6 +62,9 @@ while (( "$#" )); do
       ;;
     --r)
       MAKE_R=true
+      ;;
+    --clean)
+      CLEAN=true
       ;;
     --mvn)
       MVN="$2"
@@ -163,13 +167,17 @@ export MAVEN_OPTS="${MAVEN_OPTS:--Xmx2g -XX:ReservedCodeCacheSize=1g}"
 # Store the command as an array because $MVN variable might have spaces in it.
 # Normal quoting tricks don't work.
 # See: http://mywiki.wooledge.org/BashFAQ/050
-BUILD_COMMAND=("$MVN" clean package -DskipTests $@)
+if [[ -z "$DONT_BUILD" ]]; then
+  BUILD_COMMAND=("$MVN" clean package -DskipTests $@)
 
-# Actually build the jar
-echo -e "\nBuilding with..."
-echo -e "\$ ${BUILD_COMMAND[@]}\n"
+  # Actually build the jar
+  echo -e "\nBuilding with..."
+  echo -e "\$ ${BUILD_COMMAND[@]}\n"
 
-"${BUILD_COMMAND[@]}"
+ "${BUILD_COMMAND[@]}"
+else
+  echo -e "\nNot running mvn package because \$DONT_BUILD was set"
+fi
 
 # Make directories
 rm -rf "$DISTDIR"
