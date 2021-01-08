@@ -1003,8 +1003,6 @@ private[spark] class DAGScheduler(
       listener: JobListener,
       properties: Properties): Unit = {
     var finalStage: ResultStage = null
-    // TODO(rshkv): Re-enable this
-    // forceFoundryAuthIfEnabled(properties)
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
@@ -1061,23 +1059,6 @@ private[spark] class DAGScheduler(
     listenerBus.post(
       SparkListenerJobStart(job.jobId, jobSubmissionTime, stageInfos, properties))
     submitStage(finalStage)
-  }
-
-  // TODO(rshkv): Think about this
-  private def forceFoundryAuthIfEnabled(properties: Properties): Unit = {
-    import scala.collection.JavaConverters.asScalaSetConverter
-
-    val foundrySparkSessionPrefix = "foundry.spark.session"
-    val shouldCopyAuthTokensKey = foundrySparkSessionPrefix + ".shouldForceAuthorize"
-    if (properties != null
-      && properties.containsKey(shouldCopyAuthTokensKey)
-      && properties.getProperty(shouldCopyAuthTokensKey).equals("true")) {
-      val tokenKeys = properties.keySet.asScala.map((key: Any) => key.asInstanceOf[String])
-        .filter((key: String) => {
-          key.startsWith(foundrySparkSessionPrefix)
-        })
-      tokenKeys.foreach(key => sc.setLocalProperty(key, properties.getProperty(key)))
-    }
   }
 
   private[scheduler] def handleMapStageSubmitted(jobId: Int,
