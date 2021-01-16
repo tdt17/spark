@@ -22,7 +22,6 @@ import scala.reflect.runtime.universe.typeTag
 import scala.util.Try
 
 import org.apache.spark.annotation.Stable
-import org.apache.spark.sql.catalyst.util.SQLOrderingUtil
 
 /**
  * The data type representing `Float` values. Please use the singleton `DataTypes.FloatType`.
@@ -39,7 +38,7 @@ class FloatType private() extends FractionalType {
   private[sql] val numeric = implicitly[Numeric[Float]]
   private[sql] val fractional = implicitly[Fractional[Float]]
   private[sql] val ordering =
-    (x: Float, y: Float) => SQLOrderingUtil.compareFloats(x, y)
+    (x: Float, y: Float) => java.lang.Float.compare(x, y)
   private[sql] val asIntegral = FloatType.FloatAsIfIntegral
 
   override private[sql] def exactNumeric = FloatExactNumeric

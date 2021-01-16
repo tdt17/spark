@@ -91,12 +91,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   private val tags: mutable.Map[TreeNodeTag[_], Any] = mutable.Map.empty
 
   protected def copyTagsFrom(other: BaseType): Unit = {
-    // SPARK-32753: it only makes sense to copy tags to a new node
-    // but it's too expensive to detect other cases likes node removal
-    // so we make a compromise here to copy tags to node with no tags
-    if (tags.isEmpty) {
-      tags ++= other.tags
-    }
+    tags ++= other.tags
   }
 
   def setTagValue[T](tag: TreeNodeTag[T], value: T): Unit = {
@@ -118,6 +113,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   def children: Seq[BaseType]
 
   lazy val containsChild: Set[TreeNode[_]] = children.toSet
+
+  lazy val treeSize: Long = children.map(_.treeSize).sum + 1
 
   // Copied from Scala 2.13.1
   // github.com/scala/scala/blob/v2.13.1/src/library/scala/util/hashing/MurmurHash3.scala#L56-L73

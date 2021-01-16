@@ -735,10 +735,7 @@ object IntervalUtils {
     val result = state match {
       case UNIT_SUFFIX | UNIT_END | TRIM_BEFORE_SIGN =>
         new CalendarInterval(months, days, microseconds)
-      case TRIM_BEFORE_VALUE => throwIAE(s"expect a number after '$currentWord' but hit EOL")
-      case VALUE | VALUE_FRACTIONAL_PART =>
-        throwIAE(s"expect a unit name after '$currentWord' but hit EOL")
-      case _ => throwIAE(s"unknown error when parsing '$currentWord'")
+      case _ => null
     }
 
     result
