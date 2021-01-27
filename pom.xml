@@ -3127,6 +3127,9 @@
 
     <profile>
       <id>hadoop-palantir</id>
+      <modules>
+        <module>hadoop-cloud</module>
+      </modules>
     </profile>
 
     <profile>
