@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PALANTIR_FLAGS=(-Psparkr)
+PALANTIR_FLAGS=(-Psparkr -Phadoop-cloud)
 
 get_version() {
   git describe --tags --first-parent
