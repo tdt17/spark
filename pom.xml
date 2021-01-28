@@ -93,6 +93,7 @@
     <module>dists/hadoop-palantir-bom</module>
     <module>dists/hadoop-palantir</module>
     <module>graphx</module>
+    <module>hadoop-cloud</module>
     <module>mllib</module>
     <module>mllib-local</module>
     <module>resource-managers/kubernetes/core</module>
@@ -3127,9 +3128,6 @@
 
     <profile>
       <id>hadoop-palantir</id>
-      <modules>
-        <module>hadoop-cloud</module>
-      </modules>
     </profile>
 
     <profile>
