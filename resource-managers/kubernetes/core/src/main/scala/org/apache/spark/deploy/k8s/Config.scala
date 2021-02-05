@@ -411,32 +411,22 @@ private[spark] object Config extends Logging {
 
   val KUBERNETES_LOCAL_SUBMISSION =
     ConfigBuilder("spark.kubernetes.local.submission")
-    .booleanConf
-    .createWithDefault(false)
+      .booleanConf
+      .createWithDefault(false)
 
-  val FILES_DOWNLOAD_LOCATION =
-    ConfigBuilder("spark.kubernetes.mountDependencies.filesDownloadDir")
-      .doc("Location to download files to in the driver and executors. When using " +
-        "spark-submit, this directory must be empty and will be mounted as an empty directory " +
-        "volume on the driver and executor pods.")
-      .stringConf
-      .createWithDefault("/var/spark-data/spark-files")
+  val KUBERNETES_SECRET_FILE_MOUNT_ENABLED =
+    ConfigBuilder("spark.kubernetes.file.secretMount.enabled")
+      .doc("Mount spark-submit files as base64-encoded k8s secret instead of uploading to " +
+        s"${KUBERNETES_FILE_UPLOAD_PATH.key}")
+      .booleanConf
+      .createWithDefault(false)
 
-  val EXECUTOR_SUBMITTED_SMALL_FILES_SECRET =
-    ConfigBuilder("spark.kubernetes.mountdependencies.smallfiles.executor.secretName")
-      .doc("Name of the secret that should be mounted into the executor containers for" +
-        " distributing submitted small files without the resource staging server.")
+  val KUBERNETES_SECRET_FILE_MOUNT_PATH =
+    ConfigBuilder("spark.kubernetes.file.secretMount.path")
+      .doc("When mounting files as secret, they're made available on drivers at this path..")
       .internal()
       .stringConf
-      .createOptional
-
-  val EXECUTOR_SUBMITTED_SMALL_FILES_SECRET_MOUNT_PATH =
-    ConfigBuilder("spark.kubernetes.mountdependencies.smallfiles.executor.secretMountPath")
-      .doc(s"Mount path in the executors for the secret given by" +
-        s" ${EXECUTOR_SUBMITTED_SMALL_FILES_SECRET.key}")
-      .internal()
-      .stringConf
-      .createOptional
+      .createWithDefault("/var/data/spark-submitted-files")
 
   val KUBERNETES_DRIVER_LABEL_PREFIX = "spark.kubernetes.driver.label."
   val KUBERNETES_DRIVER_ANNOTATION_PREFIX = "spark.kubernetes.driver.annotation."

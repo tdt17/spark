@@ -48,11 +48,13 @@ class MountLocalFilesFeatureStepSuite extends SparkFunSuite with BeforeAndAfter 
     sparkFiles = Seq(
       firstLocalFile.getAbsolutePath,
       s"file://${secondLocalFile.getAbsolutePath}",
-      "https://localhost:9000/file3.txt")
+      s"local://file3.txt",
+      "https://localhost:9000/file4.txt")
     localFiles = Seq(firstLocalFile, secondLocalFile)
     val sparkConf = new SparkConf(false)
       .set("spark.files", sparkFiles.mkString(","))
-      .set(EXECUTOR_SUBMITTED_SMALL_FILES_SECRET, "secret")
+      .set(KUBERNETES_SECRET_FILE_MOUNT_ENABLED, true)
+      .set(KUBERNETES_SECRET_FILE_MOUNT_PATH, "/var/data/spark-submitted-files")
     kubernetesConf = new KubernetesDriverConf(
       sparkConf,
       "test-app",
@@ -62,44 +64,45 @@ class MountLocalFilesFeatureStepSuite extends SparkFunSuite with BeforeAndAfter 
     stepUnderTest = new MountLocalDriverFilesFeatureStep(kubernetesConf)
   }
 
-  test("Attaches a secret volume and secret name.") {
+  test("Attaches a secret volume and secret name") {
     val configuredPod = stepUnderTest.configurePod(SparkPod.initialPod())
     assert(configuredPod.pod.getSpec.getVolumes.size === 1)
     val volume = configuredPod.pod.getSpec.getVolumes.get(0)
     assert(volume.getName === "submitted-files")
-    assert(volume.getSecret.getSecretName === "secret")
+    assert(volume.getSecret.getSecretName === s"${kubernetesConf.resourceNamePrefix}-mounted-files")
     assert(configuredPod.container.getVolumeMounts.size === 1)
     val volumeMount = configuredPod.container.getVolumeMounts.get(0)
     assert(volumeMount.getName === "submitted-files")
-    assert(volumeMount.getMountPath === MOUNTED_FILES_SECRET_DIR)
+    assert(volumeMount.getMountPath === "/var/data/spark-submitted-files")
     assert(configuredPod.container.getEnv.size === 1)
     val addedEnv = configuredPod.container.getEnv.get(0)
     assert(addedEnv.getName === ENV_MOUNTED_FILES_FROM_SECRET_DIR)
-    assert(addedEnv.getValue === MOUNTED_FILES_SECRET_DIR)
+    assert(addedEnv.getValue === "/var/data/spark-submitted-files")
   }
 
-  test("Maps submitted files in the system properties.") {
+  test("Maps submitted files in the system properties") {
     val resolvedSystemProperties = stepUnderTest.getAdditionalPodSystemProperties()
     val expectedSystemProperties = Map(
       "spark.files" ->
         Seq(
-          s"$MOUNTED_FILES_SECRET_DIR/${localFiles(0).getName}",
-          s"$MOUNTED_FILES_SECRET_DIR/${localFiles(1).getName}",
-          sparkFiles(2)).mkString(","),
-      EXECUTOR_SUBMITTED_SMALL_FILES_SECRET.key -> "secret")
+          "/var/data/spark-submitted-files/file1.txt",
+          "/var/data/spark-submitted-files/file2.txt",
+          "local://file3.txt",
+          "https://localhost:9000/file4.txt"
+    ).mkString(","))
     assert(resolvedSystemProperties === expectedSystemProperties)
   }
 
-  test("Additional Kubernetes resources includes the mounted files secret.") {
+  test("Additional Kubernetes resources includes the mounted files secret") {
     val secrets = stepUnderTest.getAdditionalKubernetesResources()
     assert(secrets.size === 1)
-    assert(secrets(0).isInstanceOf[Secret])
-    val secret = secrets(0).asInstanceOf[Secret]
-    assert(secret.getMetadata.getName === "secret")
+    assert(secrets.head.isInstanceOf[Secret])
+    val secret = secrets.head.asInstanceOf[Secret]
+    assert(secret.getMetadata.getName === s"${kubernetesConf.resourceNamePrefix}-mounted-files")
     val secretData = secret.getData.asScala
     assert(secretData.size === 2)
-    assert(decodeToUtf8(secretData(localFiles(0).getName)) === "a")
-    assert(decodeToUtf8(secretData(localFiles(1).getName)) === "b")
+    assert(decodeToUtf8(secretData("file1.txt")) === "a")
+    assert(decodeToUtf8(secretData("file2.txt")) === "b")
   }
 
   private def decodeToUtf8(str: String): String = {

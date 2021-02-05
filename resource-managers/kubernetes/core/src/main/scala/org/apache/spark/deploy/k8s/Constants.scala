@@ -68,9 +68,8 @@ private[spark] object Constants {
   val SPARK_CONF_PATH = s"$SPARK_CONF_DIR_INTERNAL/$SPARK_CONF_FILE_NAME"
   val ENV_HADOOP_TOKEN_FILE_LOCATION = "HADOOP_TOKEN_FILE_LOCATION"
 
-  // Local file mounting constants
+  // Local file mounting constants, this should match the value used in 'entrypoint.sh'
   val ENV_MOUNTED_FILES_FROM_SECRET_DIR = "SPARK_MOUNTED_FILES_FROM_SECRET_DIR"
-  val MOUNTED_FILES_SECRET_DIR = "/var/data/spark-submitted-files"
 
   // BINDINGS
   val ENV_PYSPARK_MAJOR_PYTHON_VERSION = "PYSPARK_MAJOR_PYTHON_VERSION"

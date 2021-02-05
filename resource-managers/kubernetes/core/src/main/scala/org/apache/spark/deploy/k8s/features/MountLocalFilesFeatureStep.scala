@@ -18,6 +18,7 @@
 package org.apache.spark.deploy.k8s.features
 
 import java.io.File
+import java.net.URI
 import java.nio.file.Paths
 
 import scala.collection.JavaConverters._
@@ -31,12 +32,12 @@ import org.apache.spark.deploy.k8s.Constants._
 import org.apache.spark.deploy.k8s.submit.{JavaMainAppResource, PythonMainAppResource, RMainAppResource}
 import org.apache.spark.util.Utils
 
-private[spark] class MountLocalDriverFilesFeatureStep(kubernetesConf: KubernetesDriverConf)
-  extends MountLocalFilesFeatureStep(kubernetesConf) {
+private[spark] class MountLocalDriverFilesFeatureStep(conf: KubernetesDriverConf)
+  extends MountLocalFilesFeatureStep(conf) {
 
   val allFiles: Seq[String] = {
-    Utils.stringToSeq(kubernetesConf.sparkConf.get("spark.files", "")) ++
-      (kubernetesConf.mainAppResource match {
+    Utils.stringToSeq(conf.sparkConf.get("spark.files", "")) ++
+      (conf.mainAppResource match {
         case JavaMainAppResource(_) => Nil
         case PythonMainAppResource(res) => Seq(res)
         case RMainAppResource(res) => Seq(res)
@@ -44,23 +45,24 @@ private[spark] class MountLocalDriverFilesFeatureStep(kubernetesConf: Kubernetes
   }
 }
 
-private[spark] class MountLocalExecutorFilesFeatureStep(
-    kubernetesConf: KubernetesConf)
-  extends MountLocalFilesFeatureStep(kubernetesConf) {
+private[spark] class MountLocalExecutorFilesFeatureStep(conf: KubernetesConf)
+  extends MountLocalFilesFeatureStep(conf) {
 
   val allFiles: Seq[String] = Nil
 }
 
-private[spark] abstract class MountLocalFilesFeatureStep(
-    kubernetesConf: KubernetesConf)
+private[spark] abstract class MountLocalFilesFeatureStep(conf: KubernetesConf)
   extends KubernetesFeatureConfigStep {
 
-  private val secretName = {
-    kubernetesConf.get(EXECUTOR_SUBMITTED_SMALL_FILES_SECRET)
-      .getOrElse(s"${kubernetesConf.resourceNamePrefix}-mounted-small-files")
-  }
+  private val enabled = conf.get(KUBERNETES_SECRET_FILE_MOUNT_ENABLED)
+
+  private val secretName = s"${conf.resourceNamePrefix}-mounted-files"
+
+  private val mountPath = conf.get(KUBERNETES_SECRET_FILE_MOUNT_PATH)
 
   override def configurePod(pod: SparkPod): SparkPod = {
+    if (!enabled) return pod
+
     val resolvedPod = new PodBuilder(pod.pod)
       .editOrNewSpec()
         .addNewVolume()
@@ -68,45 +70,44 @@ private[spark] abstract class MountLocalFilesFeatureStep(
           .withNewSecret()
             .withSecretName(secretName)
             .endSecret()
-            .endVolume()
-          .endSpec()
-        .build()
+          .endVolume()
+        .endSpec()
+      .build()
     val resolvedContainer = new ContainerBuilder(pod.container)
       .addNewEnv()
         .withName(ENV_MOUNTED_FILES_FROM_SECRET_DIR)
-        .withValue(MOUNTED_FILES_SECRET_DIR)
-      .endEnv()
+        .withValue(mountPath)
+        .endEnv()
       .addNewVolumeMount()
         .withName("submitted-files")
-        .withMountPath(MOUNTED_FILES_SECRET_DIR)
+        .withMountPath(mountPath)
         .endVolumeMount()
       .build()
     SparkPod(resolvedPod, resolvedContainer)
   }
 
   override def getAdditionalPodSystemProperties(): Map[String, String] = {
+    if (!enabled) return Map.empty
+
     val resolvedFiles = allFiles()
       .map(file => {
         val uri = Utils.resolveURI(file)
-        val scheme = Option(uri.getScheme).getOrElse("file")
-        if (scheme != "file") {
-          file
-        } else {
+        if (shouldMountFile(uri)) {
           val fileName = Paths.get(uri.getPath).getFileName.toString
-          s"$MOUNTED_FILES_SECRET_DIR/$fileName"
+          s"$mountPath/$fileName"
+        } else {
+          file
         }
       })
-    Map(
-      EXECUTOR_SUBMITTED_SMALL_FILES_SECRET.key -> secretName,
-      "spark.files" -> resolvedFiles.mkString(","))
+    Map("spark.files" -> resolvedFiles.mkString(","))
   }
 
   override def getAdditionalKubernetesResources(): Seq[HasMetadata] = {
+    if (!enabled) return Nil
+
     val localFiles = allFiles()
       .map(Utils.resolveURI)
-      .filter { file =>
-        Option(file.getScheme).getOrElse("file") == "file"
-      }
+      .filter(shouldMountFile)
       .map(_.getPath)
       .map(new File(_))
     val localFileBase64Contents = localFiles.map { file =>
@@ -123,4 +124,12 @@ private[spark] abstract class MountLocalFilesFeatureStep(
   }
 
   def allFiles(): Seq[String]
+
+  private def shouldMountFile(file: URI): Boolean = {
+    Option(file.getScheme) match {
+      case Some("file") => true
+      case None => true
+      case _ => false
+    }
+  }
 }
