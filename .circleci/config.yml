@@ -36,14 +36,6 @@ step_templates:
   restore-build-binaries-cache: &restore-build-binaries-cache
     restore_cache:
       key: build-binaries-{{ checksum "build/mvn" }}-{{ checksum "build/sbt" }}
-  restore-ivy-cache: &restore-ivy-cache
-    restore_cache:
-      keys:
-        - v7-ivy-dependency-cache-{{ .Branch }}-{{ checksum "pom.xml" }}
-        # if cache for exact version of `pom.xml` is not present then load any most recent one
-        - v7-ivy-dependency-cache-{{ .Branch }}-
-        - v7-ivy-dependency-cache-master-{{ checksum "pom.xml" }}
-        - v7-ivy-dependency-cache-master-
   restore-gradle-wrapper-cache: &restore-gradle-wrapper-cache
     restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
   restore-gradle-cache: &restore-gradle-cache
@@ -200,7 +192,6 @@ jobs:
     <<: *defaults
     steps:
       - *checkout-code
-      - *restore-ivy-cache
       - *restore-build-binaries-cache
       - run:
           name: Download all external dependencies for the test configuration (which extends compile) and ensure we update first
@@ -209,10 +200,6 @@ jobs:
           dev/build-apache-spark.py | tee /tmp/build-apache-spark.log
       - store_artifacts:
           path: /tmp/heap.bin
-      - save_cache:
-          key: v7-ivy-dependency-cache-{{ .Branch }}-{{ checksum "pom.xml" }}
-          paths:
-            - "~/.ivy2"
       - store_artifacts:
           path: /tmp/build-apache-spark.log
           destination: build-apache-spark.log
@@ -241,7 +228,6 @@ jobs:
       - *checkout-code
       - attach_workspace:
           at: .
-      - *restore-ivy-cache
       - *restore-build-binaries-cache
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
@@ -303,7 +289,6 @@ jobs:
       - *checkout-code
       - attach_workspace:
          at: .
-      - *restore-ivy-cache
       - *restore-build-binaries-cache
       - restore_cache:
           keys:
