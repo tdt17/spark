@@ -195,7 +195,7 @@ jobs:
       - run:
           name: Run style tests
           command: dev/run-style-tests.py
-          no_output_timeout: 15m
+          no_output_timeout: 20m
 
   run-build-tests:
     # depends only on build-maven
@@ -446,6 +446,7 @@ jobs:
       - *restore-build-binaries-cache
       - run:
           command: dev/set_version_and_package.sh
+          no_output_timeout: 15m
       # This is potentially costly but we can't use the workspace as it would conflict with
       # compilation results from build-sbt
       - save_cache:
