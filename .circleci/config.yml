@@ -111,7 +111,7 @@ jobs:
     steps:
       - *checkout-code
       - *create-pom-checksum-file
-      - restore-cache:
+      - restore_cache:
           keys:
             - m2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
             - m2-cache-v1-{{ .Branch }}-
@@ -166,7 +166,11 @@ jobs:
     steps:
       - *checkout-code
       - *create-pom-checksum-file
-      - restore-cache:
+      - restore_cache:
+          keys:
+            - sbt-cache-v1-{{ .Branch }}
+            - sbt-cache-v1-
+      - restore_cache:
           keys:
             - ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
             - ivy2-cache-v1-{{ .Branch }}-
@@ -184,9 +188,12 @@ jobs:
       - save_cache:
           key: ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
           paths: [ ~/.ivy2/cache ]
+      - save_cache:
+          key: sbt-cache-v1-{{ .Branch }}
+          paths: [ ~/.sbt ]
       - persist_to_workspace:
           root: /home/circleci
-          paths: [ project, .ivy2 ]
+          paths: [ project, .ivy2, .sbt ]
 
   run-spark-docker-gradle-plugin-tests:
     <<: *test-defaults
