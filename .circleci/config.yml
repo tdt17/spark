@@ -109,6 +109,10 @@ jobs:
       - run: ./build/mvn -DskipTests -Psparkr install
       # Get sbt to run trivially, ensures its launcher is downloaded under build/
       - run: ./build/sbt -h || true
+      - persist_to_workspace:
+          root: /home/circleci
+          paths: [ project ]
+
   build-spark-docker-gradle-plugin:
     <<: *defaults
     steps:
@@ -127,7 +131,7 @@ jobs:
     <<: *test-defaults
     resource_class: medium+
     steps:
-      - *checkout-code
+      - attach_workspace: { at: /home/circleci }
       - run:
           name: Run style tests
           command: dev/run-style-tests.py
@@ -137,7 +141,7 @@ jobs:
     <<: *test-defaults
     resource_class: small
     steps:
-      - *checkout-code
+      - attach_workspace: { at: /home/circleci }
       - run: |
           dev/run-build-tests.py | tee /tmp/run-build-tests.log
       - store_artifacts:
@@ -264,7 +268,7 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
-      - *checkout-code
+      - attach_workspace: { at: /home/circleci }
       - run:
           command: dev/set_version_and_package.sh
 
