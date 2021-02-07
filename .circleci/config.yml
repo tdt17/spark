@@ -33,9 +33,6 @@ deployable-branches-and-tags: &deployable-branches-and-tags
 # Step templates
 
 step_templates:
-  restore-build-binaries-cache: &restore-build-binaries-cache
-    restore_cache:
-      key: build-binaries-{{ checksum "build/mvn" }}-{{ checksum "build/sbt" }}
   restore-gradle-wrapper-cache: &restore-gradle-wrapper-cache
     restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
   restore-gradle-cache: &restore-gradle-cache
@@ -121,18 +118,9 @@ jobs:
             - maven-dependency-cache-{{ checksum "pom.xml" }}
             # Fallback - see https://circleci.com/docs/2.0/configuration-reference/#example-2
             - maven-dependency-cache-
-      # Given the build-maven cache, this is superfluous, but leave it in in case we will want to remove the former
-      - restore_cache:
-          keys:
-            - build-binaries-{{ checksum "build/mvn" }}-{{ checksum "build/sbt" }}
-            - build-binaries-
       - run: ./build/mvn -DskipTests -Psparkr install
       # Get sbt to run trivially, ensures its launcher is downloaded under build/
       - run: ./build/sbt -h || true
-      - save_cache:
-          key: build-binaries-{{ checksum "build/mvn" }}-{{ checksum "build/sbt" }}
-          paths:
-            - "build"
       - save_cache:
           key: maven-dependency-cache-{{ checksum "pom.xml" }}
           paths:
@@ -165,7 +153,6 @@ jobs:
       # Failed to execute goal on project spark-assembly_2.11: Could not resolve dependencies for project org.apache.spark:spark-assembly_2.11:pom:2.4.0-SNAPSHOT
       - restore_cache:
           key: maven-dependency-cache-{{ checksum "pom.xml" }}
-      - *restore-build-binaries-cache
       - run:
           name: Run style tests
           command: dev/run-style-tests.py
@@ -181,7 +168,6 @@ jobs:
           key: build-maven-{{ .Branch }}-{{ .BuildNum }}
       - restore_cache:
           key: maven-dependency-cache-{{ checksum "pom.xml" }}
-      - *restore-build-binaries-cache
       - run: |
           dev/run-build-tests.py | tee /tmp/run-build-tests.log
       - store_artifacts:
@@ -192,7 +178,6 @@ jobs:
     <<: *defaults
     steps:
       - *checkout-code
-      - *restore-build-binaries-cache
       - run:
           name: Download all external dependencies for the test configuration (which extends compile) and ensure we update first
           command: dev/sbt test:externalDependencyClasspath oldDeps/test:externalDependencyClasspath
@@ -228,7 +213,6 @@ jobs:
       - *checkout-code
       - attach_workspace:
           at: .
-      - *restore-build-binaries-cache
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
       - store_artifacts:
@@ -289,7 +273,6 @@ jobs:
       - *checkout-code
       - attach_workspace:
          at: .
-      - *restore-build-binaries-cache
       - restore_cache:
           keys:
             - v1-test-results-{{ .Branch }}-{{ .BuildNum }}
@@ -375,7 +358,6 @@ jobs:
       - *checkout-code
       - restore_cache:
           key: maven-dependency-cache-{{ checksum "pom.xml" }}
-      - *restore-build-binaries-cache
       - run:
           command: dev/set_version_and_package.sh
       # This is potentially costly but we can't use the workspace as it would conflict with
@@ -410,7 +392,6 @@ jobs:
           key: v1-maven-build-with-version-{{ .Branch }}-{{ .Revision }}
       - restore_cache:
           key: v1-maven-dependency-cache-versioned-{{ checksum "pom.xml" }}
-      - *restore-build-binaries-cache
 
       - run: echo "user=$BINTRAY_USERNAME" > .credentials
       - run: echo "password=$BINTRAY_PASSWORD" >> .credentials
