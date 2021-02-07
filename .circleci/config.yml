@@ -165,6 +165,12 @@ jobs:
     <<: *defaults
     steps:
       - *checkout-code
+      - *create-pom-checksum-file
+      - restore-cache:
+          keys:
+            - ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
+            - ivy2-cache-v1-{{ .Branch }}-
+            - ivy2-cache-v1-
       - run:
           name: Download all external dependencies for the test configuration (which extends compile) and ensure we update first
           command: dev/sbt test:externalDependencyClasspath oldDeps/test:externalDependencyClasspath
@@ -175,9 +181,12 @@ jobs:
       - store_artifacts:
           path: /tmp/build-apache-spark.log
           destination: build-apache-spark.log
+      - save_cache:
+          key: ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
+          paths: [ ~/.ivy2/cache ]
       - persist_to_workspace:
           root: /home/circleci
-          paths: [ project ]
+          paths: [ project, .ivy2 ]
 
   run-spark-docker-gradle-plugin-tests:
     <<: *test-defaults
