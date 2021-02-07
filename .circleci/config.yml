@@ -36,6 +36,10 @@ step_templates:
     restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
   restore-gradle-cache: &restore-gradle-cache
     restore_cache: { key: 'gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
+  create-pom-checksum-file: &create-pom-checksum-file
+    run:
+      name: Create file of pom.xml checksums
+      command: find . -maxdepth 4 -name 'pom.xml' -exec shasum {} \; > /tmp/pom_checksums.txt
   checkout-code: &checkout-code
     run:
       name: Checkout code
@@ -106,12 +110,21 @@ jobs:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
       - *checkout-code
+      - *create-pom-checksum-file
+      - restore-cache:
+          keys:
+            - m2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
+            - m2-cache-v1-{{ .Branch }}-
+            - m2-cache-v1-
       - run: ./build/mvn -DskipTests -Psparkr install
       # Get sbt to run trivially, ensures its launcher is downloaded under build/
       - run: ./build/sbt -h || true
+      - save_cache:
+          key: m2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
+          paths: [ ~/.m2/repository ]
       - persist_to_workspace:
           root: /home/circleci
-          paths: [ project ]
+          paths: [ project, .m2 ]
 
   build-spark-docker-gradle-plugin:
     <<: *defaults
