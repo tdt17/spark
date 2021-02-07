@@ -158,13 +158,9 @@ jobs:
       - store_artifacts:
           path: /tmp/build-apache-spark.log
           destination: build-apache-spark.log
-      # Also save all the assembly jars directories to the workspace - need them for spark submitting
       - persist_to_workspace:
-          root: .
-          paths:
-            - 'assembly/target/scala-*/jars'
-            - 'examples/target/scala-*/jars'
-            - 'external/*/target/scala-*/*.jar'
+          root: /home/circleci
+          paths: [ project ]
 
   run-spark-docker-gradle-plugin-tests:
     <<: *test-defaults
@@ -180,9 +176,7 @@ jobs:
     # depends on build-sbt
     <<: *defaults
     steps:
-      - *checkout-code
-      - attach_workspace:
-          at: .
+      - attach_workspace: { at: /home/circleci }
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
       - store_artifacts:
@@ -197,15 +191,7 @@ jobs:
       - image: palantirtechnologies/circle-spark-python:0.2.3
     parallelism: 2
     steps:
-      - *checkout-code
-      # These two steps restore all the target directories except jars
-      # Necessary because of SPARK_PREPEND_CLASSES being used in python tests, and some python tests
-      # accessing classes from the core/test configuration.
-      # ---
-      # Python tests need assembly files build by the `build-sbt` job
-      # e.g. external/kafka-0-8-assembly/target/scala-2.11/spark-streaming-kafka-0-8-assembly-2.4.0-SNAPSHOT.jar
-      - attach_workspace:
-          at: .
+      - attach_workspace: { at: /home/circleci }
       - run: dev/run-python-tests.py
       - store_test_results:
           path: target/test-reports
@@ -219,9 +205,7 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
-      - *checkout-code
-      - attach_workspace:
-          at: .
+      - attach_workspace: { at: /home/circleci }
       - run:
           name: Install SparkR
           command: R/install-dev.sh
@@ -237,16 +221,13 @@ jobs:
     # Spark runs a lot of tests in parallel, we need 16 GB of RAM for this
     resource_class: xlarge
     steps:
+      - attach_workspace: { at: /home/circleci }
       - run:
           name: Before running tests, ensure we created the CIRCLE_TEST_REPORTS directory
           command: mkdir -p $CIRCLE_TEST_REPORTS
-      - *checkout-code
-      - attach_workspace:
-         at: .
       - run:
           name: Run all tests
-          command: ./dev/run-scala-tests.py \
-              | tee -a "/tmp/run-scala-tests.log"
+          command: ./dev/run-scala-tests.py | tee -a "/tmp/run-scala-tests.log"
           no_output_timeout: 20m
 
       - store_artifacts:
