@@ -48,10 +48,6 @@ step_templates:
     restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
   restore-gradle-cache: &restore-gradle-cache
     restore_cache: { key: 'gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
-  restore-home-sbt-cache: &restore-home-sbt-cache
-    restore_cache:
-      keys:
-        - v2-home-sbt-{{ checksum "build/sbt" }}-{{ checksum "project/target/streams/$global/update/$global/streams/update_cache_2.10/inputs" }}
   checkout-code: &checkout-code
     run:
       name: Checkout code
@@ -205,7 +201,6 @@ jobs:
     steps:
       - *checkout-code
       - *restore-ivy-cache
-      - *restore-home-sbt-cache
       - *restore-build-binaries-cache
       - run:
           name: Download all external dependencies for the test configuration (which extends compile) and ensure we update first
@@ -248,7 +243,6 @@ jobs:
           at: .
       - *restore-ivy-cache
       - *restore-build-binaries-cache
-      - *restore-home-sbt-cache
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
       - store_artifacts:
@@ -311,7 +305,6 @@ jobs:
          at: .
       - *restore-ivy-cache
       - *restore-build-binaries-cache
-      - *restore-home-sbt-cache
       - restore_cache:
           keys:
             - v1-test-results-{{ .Branch }}-{{ .BuildNum }}
