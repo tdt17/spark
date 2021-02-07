@@ -113,18 +113,9 @@ jobs:
             - build-maven-{{ .Branch }}-
             - build-maven-master-
       - *checkout-code
-      - restore_cache:
-          keys:
-            - maven-dependency-cache-{{ checksum "pom.xml" }}
-            # Fallback - see https://circleci.com/docs/2.0/configuration-reference/#example-2
-            - maven-dependency-cache-
       - run: ./build/mvn -DskipTests -Psparkr install
       # Get sbt to run trivially, ensures its launcher is downloaded under build/
       - run: ./build/sbt -h || true
-      - save_cache:
-          key: maven-dependency-cache-{{ checksum "pom.xml" }}
-          paths:
-            - "~/.m2"
       # And finally save the whole project directory
       - save_cache:
           key: build-maven-{{ .Branch }}-{{ .BuildNum }}
@@ -149,10 +140,6 @@ jobs:
     resource_class: medium+
     steps:
       - *checkout-code
-      # Need maven dependency cache, otherwise checkstyle tests fail as such:
-      # Failed to execute goal on project spark-assembly_2.11: Could not resolve dependencies for project org.apache.spark:spark-assembly_2.11:pom:2.4.0-SNAPSHOT
-      - restore_cache:
-          key: maven-dependency-cache-{{ checksum "pom.xml" }}
       - run:
           name: Run style tests
           command: dev/run-style-tests.py
@@ -166,8 +153,6 @@ jobs:
       - *checkout-code
       - restore_cache:
           key: build-maven-{{ .Branch }}-{{ .BuildNum }}
-      - restore_cache:
-          key: maven-dependency-cache-{{ checksum "pom.xml" }}
       - run: |
           dev/run-build-tests.py | tee /tmp/run-build-tests.log
       - store_artifacts:
@@ -356,8 +341,6 @@ jobs:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
       - *checkout-code
-      - restore_cache:
-          key: maven-dependency-cache-{{ checksum "pom.xml" }}
       - run:
           command: dev/set_version_and_package.sh
       # This is potentially costly but we can't use the workspace as it would conflict with
@@ -365,9 +348,6 @@ jobs:
       - save_cache:
           key: v1-maven-build-with-version-{{ .Branch }}-{{ .Revision }}
           paths: .
-      - save_cache:
-          key: v1-maven-dependency-cache-versioned-{{ checksum "pom.xml" }}
-          paths: ~/.m2
 
   deploy-gradle:
     <<: *defaults
@@ -390,8 +370,6 @@ jobs:
       # Restoring first (and instead of checkout) as mvn versions:set mutates real source code...
       - restore_cache:
           key: v1-maven-build-with-version-{{ .Branch }}-{{ .Revision }}
-      - restore_cache:
-          key: v1-maven-dependency-cache-versioned-{{ checksum "pom.xml" }}
 
       - run: echo "user=$BINTRAY_USERNAME" > .credentials
       - run: echo "password=$BINTRAY_PASSWORD" >> .credentials
