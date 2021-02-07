@@ -271,6 +271,9 @@ jobs:
       - attach_workspace: { at: /home/circleci }
       - run:
           command: dev/set_version_and_package.sh
+      - persist_to_workspace:
+          root: /home/circleci
+          paths: [ project ]
 
   deploy-gradle:
     <<: *defaults
@@ -289,6 +292,7 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
+      - attach_workspace: { at: /home/circleci }
       - run: echo "user=$BINTRAY_USERNAME" > .credentials
       - run: echo "password=$BINTRAY_PASSWORD" >> .credentials
       - run: echo "realm=Bintray API Realm" >> .credentials
