@@ -106,20 +106,10 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
-      # Saves us from recompiling every time...
-      - restore_cache:
-          keys:
-            - build-maven-{{ .Branch }}-{{ .BuildNum }}
-            - build-maven-{{ .Branch }}-
-            - build-maven-master-
       - *checkout-code
       - run: ./build/mvn -DskipTests -Psparkr install
       # Get sbt to run trivially, ensures its launcher is downloaded under build/
       - run: ./build/sbt -h || true
-      # And finally save the whole project directory
-      - save_cache:
-          key: build-maven-{{ .Branch }}-{{ .BuildNum }}
-          paths: .
   build-spark-docker-gradle-plugin:
     <<: *defaults
     steps:
@@ -135,7 +125,6 @@ jobs:
           paths: [ ~/.gradle/caches ]
 
   run-style-tests:
-    # depends only on build-maven
     <<: *test-defaults
     resource_class: medium+
     steps:
@@ -146,13 +135,10 @@ jobs:
           no_output_timeout: 15m
 
   run-build-tests:
-    # depends only on build-maven
     <<: *test-defaults
     resource_class: small
     steps:
       - *checkout-code
-      - restore_cache:
-          key: build-maven-{{ .Branch }}-{{ .BuildNum }}
       - run: |
           dev/run-build-tests.py | tee /tmp/run-build-tests.log
       - store_artifacts:
@@ -343,11 +329,6 @@ jobs:
       - *checkout-code
       - run:
           command: dev/set_version_and_package.sh
-      # This is potentially costly but we can't use the workspace as it would conflict with
-      # compilation results from build-sbt
-      - save_cache:
-          key: v1-maven-build-with-version-{{ .Branch }}-{{ .Revision }}
-          paths: .
 
   deploy-gradle:
     <<: *defaults
@@ -366,11 +347,6 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
-      # This cache contains the whole project after version was set and mvn package was called
-      # Restoring first (and instead of checkout) as mvn versions:set mutates real source code...
-      - restore_cache:
-          key: v1-maven-build-with-version-{{ .Branch }}-{{ .Revision }}
-
       - run: echo "user=$BINTRAY_USERNAME" > .credentials
       - run: echo "password=$BINTRAY_PASSWORD" >> .credentials
       - run: echo "realm=Bintray API Realm" >> .credentials
