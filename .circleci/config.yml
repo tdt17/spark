@@ -42,6 +42,22 @@ step_templates:
     run:
       name: Create file of pom.xml checksums
       command: find . -maxdepth 4 -name 'pom.xml' -exec shasum {} \; > /tmp/pom_checksums.txt
+  cache-build-tools: &cache-build-tools
+    # Upstream's caching scheme:
+    # https://github.com/apache/spark/blob/eb5558ed35d51215de2ab12156e477cd7130a66a/.github/workflows/build_and_test.yml#L183-L194
+    save_cache:
+      key: build-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
+      paths:
+        - project/build/apache-maven-*
+        - project/build/zinc-*
+        - project/build/scala-*
+        - project/build/*.jar
+  restore-build-tools: &restore-build-tools
+    restore_cache:
+      keys:
+        - build-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
+        - build-cache-v1-{{ .Branch }}-
+        - build-cache-v1-
   checkout-code: &checkout-code
     run:
       name: Checkout code
@@ -113,6 +129,7 @@ jobs:
     steps:
       - *checkout-code
       - *create-pom-checksum-file
+      - *restore-build-tools
       - restore_cache:
           keys:
             - m2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
@@ -121,6 +138,7 @@ jobs:
       - run: ./build/mvn -DskipTests -Psparkr install
       # Get sbt to run trivially, ensures its launcher is downloaded under build/
       - run: ./build/sbt -h || true
+      - *cache-build-tools
       - save_cache:
           key: m2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
           paths: [ ~/.m2/repository ]
@@ -168,9 +186,11 @@ jobs:
     steps:
       - *checkout-code
       - *create-pom-checksum-file
+      - *restore-build-tools
       - restore_cache:
           keys:
-            - sbt-cache-v1-{{ .Branch }}
+            - sbt-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
+            - sbt-cache-v1-{{ .Branch }}-
             - sbt-cache-v1-
       - restore_cache:
           keys:
@@ -187,11 +207,12 @@ jobs:
       - store_artifacts:
           path: /tmp/build-apache-spark.log
           destination: build-apache-spark.log
+      - *cache-build-tools
       - save_cache:
           key: ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
           paths: [ ~/.ivy2/cache ]
       - save_cache:
-          key: sbt-cache-v1-{{ .Branch }}
+          key: sbt-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
           paths: [ ~/.sbt ]
       - persist_to_workspace:
           root: /home/circleci
