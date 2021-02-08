@@ -34,10 +34,6 @@ deployable-branches-and-tags: &deployable-branches-and-tags
 # Step templates
 
 step_templates:
-  restore-gradle-wrapper-cache: &restore-gradle-wrapper-cache
-    restore_cache: { key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}' }
-  restore-gradle-cache: &restore-gradle-cache
-    restore_cache: { key: 'gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}' }
   create-pom-checksum-file: &create-pom-checksum-file
     run:
       name: Create file of pom.xml checksums
@@ -150,15 +146,20 @@ jobs:
     <<: *defaults
     steps:
       - *checkout-code
-      - *restore-gradle-wrapper-cache
-      - *restore-gradle-cache
+      - restore_cache:
+          keys:
+            - gradle-cache-v1-{{ .Branch }}-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
+            - gradle-cache-v1-{{ .Branch }}-
+            - gradle-cache-v1-
       - run: ./gradlew --info --stacktrace check -x test
       - save_cache:
-          key: 'gradle-wrapper-v2-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}'
-          paths: [ ~/.gradle/wrapper ]
-      - save_cache:
-          key: 'gradle-cache-v2-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}'
-          paths: [ ~/.gradle/caches ]
+          key: gradle-cache-v1-{{ .Branch }}-{{ checksum "versions.props" }}-{{ checksum "build.gradle" }}-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
+          paths:
+           - ~/.gradle/wrapper
+           - ~/.gradle/caches
+      - persist_to_workspace:
+          root: /home/circleci
+          paths: [ project, .gradle ]
 
   run-style-tests:
     <<: *test-defaults
@@ -221,9 +222,7 @@ jobs:
     <<: *test-defaults
     resource_class: medium
     steps:
-      - *checkout-code
-      - *restore-gradle-wrapper-cache
-      - *restore-gradle-cache
+      - attach_workspace: { at: /home/circleci }
       - setup_remote_docker: { docker_layer_caching: true }
       - run: ./gradlew --info --parallel --continue --stacktrace test
 
@@ -330,9 +329,7 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
-      - *checkout-code
-      - *restore-gradle-wrapper-cache
-      - *restore-gradle-cache
+      - attach_workspace: { at: /home/circleci }
       - deploy:
           command: ./gradlew --parallel --continue --stacktrace --no-daemon bintrayUpload
 
