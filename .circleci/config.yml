@@ -63,7 +63,9 @@ step_templates:
     save_cache:
       key: workspace-cache-v1-{{ .Revision }}-{{ .BuildNum }}
       paths:
-        - /home/circleci/project
+        - ~/project
+        - ~/.ivy2
+        - ~/.sbt
   restore-workspace: &restore-workspace
     restore_cache:
       keys:
