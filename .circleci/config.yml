@@ -6,6 +6,7 @@ defaults: &defaults
   resource_class: xlarge
   environment: &defaults-environment
     TERM: dumb
+    SBT_OPTS: "-Xmx4G -XX:MaxPermSize=2G"
 
 
 test-defaults: &test-defaults
