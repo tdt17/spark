@@ -62,14 +62,31 @@ step_templates:
   cache-workspace: &cache-workspace
     save_cache:
       key: workspace-cache-v1-{{ .Revision }}-{{ .BuildNum }}
-      paths:
-        - ~/project
-        - ~/.ivy2
-        - ~/.sbt
+      paths: [ /home/circleci/project ]
   restore-workspace: &restore-workspace
     restore_cache:
       keys:
         - workspace-cache-v1-{{ .Revision }}-
+  cache-ivy: &cache-ivy2
+    save_cache:
+      key: ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
+      paths: [ ~/.ivy2/cache ]
+  restore-ivy: &restore-ivy2
+    restore_cache:
+      keys:
+        - ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
+        - ivy2-cache-v1-{{ .Branch }}-
+        - ivy2-cache-v1-
+  cache-sbt: &cache-sbt
+    save_cache:
+      key: sbt-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
+      paths: [ ~/.sbt ]
+  restore-sbt: &restore-sbt
+    restore_cache:
+      keys:
+        - sbt-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
+        - sbt-cache-v1-{{ .Branch }}-
+        - sbt-cache-v1-
   checkout-code: &checkout-code
     run:
       name: Checkout code
@@ -204,16 +221,8 @@ jobs:
       - *checkout-code
       - *create-pom-checksum-file
       - *restore-build-tools
-      - restore_cache:
-          keys:
-            - sbt-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
-            - sbt-cache-v1-{{ .Branch }}-
-            - sbt-cache-v1-
-      - restore_cache:
-          keys:
-            - ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
-            - ivy2-cache-v1-{{ .Branch }}-
-            - ivy2-cache-v1-
+      - *restore-sbt
+      - *restore-ivy2
       - run:
           name: Download all external dependencies for the test configuration (which extends compile) and ensure we update first
           command: dev/sbt test:externalDependencyClasspath oldDeps/test:externalDependencyClasspath
@@ -224,12 +233,8 @@ jobs:
       - store_artifacts:
           path: /tmp/build-apache-spark.log
           destination: build-apache-spark.log
-      - save_cache:
-          key: ivy2-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}
-          paths: [ ~/.ivy2/cache ]
-      - save_cache:
-          key: sbt-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
-          paths: [ ~/.sbt ]
+      - *cache-ivy2
+      - *cache-sbt
       - *cache-workspace
 
   run-spark-docker-gradle-plugin-tests:
@@ -245,6 +250,9 @@ jobs:
     <<: *defaults
     steps:
       - *restore-workspace
+      - *create-pom-checksum-file
+      - *restore-sbt
+      - *restore-ivy2
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
       - store_artifacts:
@@ -290,6 +298,9 @@ jobs:
     resource_class: xlarge
     steps:
       - *restore-workspace
+      - *create-pom-checksum-file
+      - *restore-sbt
+      - *restore-ivy2
       - run:
           name: Before running tests, ensure we created the CIRCLE_TEST_REPORTS directory
           command: mkdir -p $CIRCLE_TEST_REPORTS
