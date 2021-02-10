@@ -42,18 +42,18 @@ step_templates:
     # Upstream's caching scheme: https://github.com/apache/spark/blob/eb5558ed35d51215de2ab12156e477cd7130a66a/.github/workflows/build_and_test.yml#L183-L194
     # Only save_cache in build-maven job, which downloads both mvn and sbt tools
     save_cache:
-      key: build-tool-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
+      key: build-tool-cache-v2-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
       paths:
-        - project/build/apache-maven-*
-        - project/build/zinc-*
-        - project/build/scala-*
-        - project/build/*.jar
+        - build/apache-maven-*
+        - build/zinc-*
+        - build/scala-*
+        - build/*.jar
   restore-build-tools: &restore-build-tools
     restore_cache:
       keys:
-        - build-tool-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
-        - build-tool-cache-v1-{{ .Branch }}-
-        - build-tool-cache-v1-
+        - build-tool-cache-v2-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
+        - build-tool-cache-v2-{{ .Branch }}-
+        - build-tool-cache-v2-
   # This is a cache for the whole workspace. It's unique per CircleCI build and only used downstream of build-sbt.
   # Why not 'persist_to_workspace'? The deploy job depends on both build-maven and build-sbt. Both produce the same
   # files which causes CircleCI to fail restoring the workspace in deploy.
