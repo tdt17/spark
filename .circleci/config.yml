@@ -54,6 +54,20 @@ step_templates:
         - build-tool-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
         - build-tool-cache-v1-{{ .Branch }}-
         - build-tool-cache-v1-
+  # This is a cache for the whole workspace. It's unique per CircleCI build and only used downstream of build-sbt.
+  # Why not 'persist_to_workspace'? The deploy job depends on both build-maven and build-sbt. Both produce the same
+  # files which causes CircleCI to fail restoring the workspace in deploy.
+  # The caching key is unique per CircleCI build (of a single job) meaning anytime build-sbt is run or re-run, a new
+  # cache key is used. When restoring we only match on the Git revision, such that we get the latest cached workspace.
+  cache-workspace: &cache-workspace
+    save_cache:
+      key: workspace-cache-v1-{{ .Revision }}-{{ .BuildNum }}
+      paths:
+        - /home/circleci/project
+  restore-workspace: &restore-workspace
+    restore_cache:
+      keys:
+        - workspace-cache-v1-{{ .Revision }}-
   checkout-code: &checkout-code
     run:
       name: Checkout code
@@ -165,7 +179,7 @@ jobs:
     <<: *test-defaults
     resource_class: medium+
     steps:
-      - attach_workspace: { at: /home/circleci }
+      - *restore-workspace
       - run:
           name: Run style tests
           command: dev/run-style-tests.py
@@ -214,9 +228,7 @@ jobs:
       - save_cache:
           key: sbt-cache-v1-{{ .Branch }}-{{ checksum "/tmp/pom_checksums.txt" }}-{{ checksum "project/build.properties" }}
           paths: [ ~/.sbt ]
-      - persist_to_workspace:
-          root: /home/circleci
-          paths: [ project, .ivy2, .sbt ]
+      - *cache-workspace
 
   run-spark-docker-gradle-plugin-tests:
     <<: *test-defaults
@@ -230,7 +242,7 @@ jobs:
     # depends on build-sbt
     <<: *defaults
     steps:
-      - attach_workspace: { at: /home/circleci }
+      - *restore-workspace
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
       - store_artifacts:
@@ -245,7 +257,7 @@ jobs:
       - image: palantirtechnologies/circle-spark-python:0.2.3
     parallelism: 2
     steps:
-      - attach_workspace: { at: /home/circleci }
+      - *restore-workspace
       - run: dev/run-python-tests.py
       - store_test_results:
           path: target/test-reports
@@ -259,7 +271,7 @@ jobs:
     docker:
       - image: palantirtechnologies/circle-spark-r:0.2.3
     steps:
-      - attach_workspace: { at: /home/circleci }
+      - *restore-workspace
       - run:
           name: Install SparkR
           command: R/install-dev.sh
@@ -275,7 +287,7 @@ jobs:
     # Spark runs a lot of tests in parallel, we need 16 GB of RAM for this
     resource_class: xlarge
     steps:
-      - attach_workspace: { at: /home/circleci }
+      - *restore-workspace
       - run:
           name: Before running tests, ensure we created the CIRCLE_TEST_REPORTS directory
           command: mkdir -p $CIRCLE_TEST_REPORTS
