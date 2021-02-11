@@ -6,7 +6,9 @@ defaults: &defaults
   resource_class: xlarge
   environment: &defaults-environment
     TERM: dumb
-    SBT_OPTS: "-Xmx4G -XX:MaxPermSize=2G"
+    # https://spark.apache.org/docs/latest/building-spark.html#building-apache-spark
+    MAVEN_OPTS: "-Xmx2g -XX:ReservedCodeCacheSize=1g"
+    SBT_OPTS: "-Xmx2g -XX:ReservedCodeCacheSize=1g"
 
 
 test-defaults: &test-defaults
