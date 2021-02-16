@@ -102,10 +102,9 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
     snapshotsStore.clock.advance(1)
     snapshotsStore.replaceSnapshot(Seq.empty[Pod])
     snapshotsStore.notifySubscribers()
-    val msg = "The executor with ID 1 (registered at 7 ms) was not found in the cluster at " +
-      "the polling time (30008 ms) which is after the accepted detect delta time (30000 ms) " +
-      "configured by `spark.kubernetes.executor.missingPodDetectDelta`. The executor may have " +
-      "been deleted but the driver missed the deletion event. Marking this executor as failed."
+    val msg = s"The executor with ID 1 was not found in the cluster but we didn't" +
+      s" get a reason why. Marking the executor as failed. The executor may have been" +
+      s" deleted but the driver missed the deletion event."
     val expectedLossReason = ExecutorExited(-1, exitCausedByApp = false, msg)
     verify(schedulerBackend).doRemoveExecutor("1", expectedLossReason)
   }

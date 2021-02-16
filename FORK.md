@@ -8,6 +8,10 @@
 * [SPARK-20952](https://issues.apache.org/jira/browse/SPARK-20952) - ParquetFileFormat should forward TaskContext to its forkjoinpool
 * [SPARK-26626](https://issues.apache.org/jira/browse/SPARK-26626) - Limited the maximum size of repeatedly substituted aliases
 * [SPARK-25200](https://issues.apache.org/jira/browse/SPARK-25200) - Allow setting HADOOP_CONF_DIR as a spark config
+* SafeLogging implemented for the following files:
+  * core: Broadcast, CoarseGrainedExecutorBackend, CoarseGrainedSchedulerBackend, Executor, MapOutputTracker (partial), MemoryStore, SparkContext, TorrentBroadcast
+  * kubernetes: ExecutorPodsAllocator, ExecutorPodsLifecycleManager, ExecutorPodsPollingSnapshotSource, ExecutorPodsSnapshot, ExecutorPodsWatchSnapshotSource, KubernetesClusterSchedulerBackend
+  * yarn: YarnClusterSchedulerBackend, YarnSchedulerBackend
 
 
 
