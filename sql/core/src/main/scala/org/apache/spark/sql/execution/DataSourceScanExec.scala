@@ -17,17 +17,17 @@
 
 package org.apache.spark.sql.execution
 
-import scala.collection.mutable.{ArrayBuffer, HashMap}
+import scala.collection.mutable.HashMap
 
 import org.apache.commons.lang3.StringUtils
-import org.apache.hadoop.fs.{BlockLocation, FileStatus, LocatedFileStatus, Path}
+import org.apache.hadoop.fs.Path
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.catalog.BucketSpec
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext
+import org.apache.spark.sql.catalyst.expressions.codegen.LazilyGeneratedOrdering
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.physical.{HashPartitioning, Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.catalyst.util.truncatedString
@@ -121,6 +121,14 @@ case class RowDataSourceScanExec(
       tableIdentifier = None)
 }
 
+sealed abstract class ScanMode
+
+case object RegularMode extends ScanMode
+
+case class SortedBucketMode(sortOrdering: Ordering[InternalRow]) extends ScanMode {
+  override def toString: String = "SortedBucketMode"
+}
+
 /**
  * Physical plan node for scanning data from HadoopFsRelations.
  *
@@ -147,6 +155,14 @@ case class FileSourceScanExec(
   override lazy val supportsBatch: Boolean = {
     relation.fileFormat.supportBatch(relation.sparkSession, schema)
   }
+
+  private lazy val scanMode: ScanMode =
+    if (conf.bucketSortedScanEnabled && outputOrdering.nonEmpty && !singleFilePartitions) {
+      val sortOrdering = new LazilyGeneratedOrdering(outputOrdering, output)
+      SortedBucketMode(sortOrdering)
+    } else {
+      RegularMode
+    }
 
   private lazy val needsUnsafeRowConversion: Boolean = {
     if (relation.fileFormat.isInstanceOf[ParquetSource]) {
@@ -183,6 +199,13 @@ case class FileSourceScanExec(
     val timeTakenMs = ((System.nanoTime() - startTime) + optimizerMetadataTimeNs) / 1000 / 1000
     driverMetrics("metadataTime") = timeTakenMs
     ret
+  }
+
+  private lazy val singleFilePartitions: Boolean = {
+    val files = selectedPartitions.flatMap(partition => partition.files)
+    val bucketToFilesGrouping =
+      files.map(_.getPath.getName).groupBy(file => BucketingUtils.getBucketId(file))
+    bucketToFilesGrouping.forall(p => p._2.length <= 1)
   }
 
   override lazy val (outputPartitioning, outputOrdering): (Partitioning, Seq[SortOrder]) = {
@@ -225,15 +248,12 @@ case class FileSourceScanExec(
             // In case of bucketing, its possible to have multiple files belonging to the
             // same bucket in a given relation. Each of these files are locally sorted
             // but those files combined together are not globally sorted. Given that,
-            // the RDD partition will not be sorted even if the relation has sort columns set
-            // Current solution is to check if all the buckets have a single file in it
-
-            val files = selectedPartitions.flatMap(partition => partition.files)
-            val bucketToFilesGrouping =
-              files.map(_.getPath.getName).groupBy(file => BucketingUtils.getBucketId(file))
-            val singleFilePartitions = bucketToFilesGrouping.forall(p => p._2.length <= 1)
-
-            if (singleFilePartitions) {
+            // the RDD partition will not be sorted even if the relation has sort columns set.
+            //
+            // 1. With configuration "spark.sql.sources.bucketing.sortedScan.enabled" being enabled,
+            //    output ordering is preserved by reading those sorted files in sort-merge way.
+            // 2. If not, output ordering is preserved if each bucket has no more than one file.
+            if (conf.bucketSortedScanEnabled || singleFilePartitions) {
               // TODO Currently Spark does not support writing columns sorting in descending order
               // so using Ascending order. This can be fixed in future
               sortColumns.map(attribute => SortOrder(attribute, Ascending))
@@ -269,7 +289,8 @@ case class FileSourceScanExec(
         "PartitionFilters" -> seqToString(partitionFilters),
         "PushedFilters" -> seqToString(pushedDownFilters),
         "DataFilters" -> seqToString(dataFilters),
-        "Location" -> locationDesc)
+        "Location" -> locationDesc,
+        "ScanMode" -> scanMode.toString)
     val withOptPartitionCount =
       relation.partitionSchemaOption.map { _ =>
         metadata + ("PartitionCount" -> selectedPartitions.size.toString)
@@ -408,7 +429,12 @@ case class FileSourceScanExec(
       FilePartition(bucketId, prunedFilesGroupedToBuckets.getOrElse(bucketId, Nil))
     }
 
-    new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions)
+    scanMode match {
+      case SortedBucketMode(sortOrdering) =>
+        new FileSortedMergeScanRDD(fsRelation.sparkSession, readFile, filePartitions, sortOrdering)
+      case RegularMode =>
+        new FileScanRDD(fsRelation.sparkSession, readFile, filePartitions)
+    }
   }
 
   /**
