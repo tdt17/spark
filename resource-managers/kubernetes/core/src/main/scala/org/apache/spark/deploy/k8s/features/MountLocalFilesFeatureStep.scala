@@ -20,13 +20,14 @@ package org.apache.spark.deploy.k8s.features
 import java.io.File
 import java.net.URI
 import java.nio.file.Paths
+import java.util.Locale
 
 import scala.collection.JavaConverters._
 
 import com.google.common.io.{BaseEncoding, Files}
 import io.fabric8.kubernetes.api.model.{ContainerBuilder, HasMetadata, PodBuilder, SecretBuilder}
 
-import org.apache.spark.deploy.k8s.{KubernetesConf, KubernetesDriverConf, SparkPod}
+import org.apache.spark.deploy.k8s.{KubernetesConf, KubernetesDriverConf, KubernetesUtils, SparkPod}
 import org.apache.spark.deploy.k8s.Config._
 import org.apache.spark.deploy.k8s.Constants._
 import org.apache.spark.deploy.k8s.submit.{JavaMainAppResource, PythonMainAppResource, RMainAppResource}
@@ -56,7 +57,10 @@ private[spark] abstract class MountLocalFilesFeatureStep(conf: KubernetesConf)
 
   private val enabled = conf.get(KUBERNETES_SECRET_FILE_MOUNT_ENABLED)
 
-  private val secretName = s"${conf.resourceNamePrefix}-mounted-files"
+  // Secret name needs to be the same for drivers and executors because both will have a volume
+  // populated by the secret, but Spark's k8s client will only store the secret configured on the
+  // driver. If the secret names don't match, executors will fail to mount the volume.
+  private val secretName = s"${secretNamePrefix()}-mounted-files"
 
   private val mountPath = conf.get(KUBERNETES_SECRET_FILE_MOUNT_PATH)
 
@@ -131,5 +135,16 @@ private[spark] abstract class MountLocalFilesFeatureStep(conf: KubernetesConf)
       case None => true
       case _ => false
     }
+  }
+
+  // Like KubernetesConf#getResourceNamePrefix but unique per app, not per resource.
+  private def secretNamePrefix(): String = {
+    s"${conf.appName}"
+      .trim
+      .toLowerCase(Locale.ROOT)
+      .replaceAll("\\s+", "-")
+      .replaceAll("\\.", "-")
+      .replaceAll("[^a-z0-9\\-]", "")
+      .replaceAll("-+", "-")
   }
 }
