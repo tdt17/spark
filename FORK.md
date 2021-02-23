@@ -19,4 +19,6 @@
 
 # Added
 * [palantir/spark#381](https://github.com/palantir/spark/pull/381) Gradle plugin to easily create custom docker images for use with k8s
+* [palantir/spark#521](https://github.com/palantir/spark/pull/521) K8s local file mounting
+
 
