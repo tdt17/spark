@@ -45,8 +45,7 @@ private[spark] class KubernetesExecutorBuilder {
       new MountSecretsFeatureStep(conf),
       new EnvSecretsFeatureStep(conf),
       new MountVolumesFeatureStep(conf),
-      new LocalDirsFeatureStep(conf),
-      new MountLocalExecutorFilesFeatureStep(conf))
+      new LocalDirsFeatureStep(conf))
 
     features.foldLeft(initialPod) { case (pod, feature) => feature.configurePod(pod) }
   }

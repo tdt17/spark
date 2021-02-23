@@ -423,7 +423,7 @@ private[spark] object Config extends Logging {
 
   val KUBERNETES_SECRET_FILE_MOUNT_PATH =
     ConfigBuilder("spark.kubernetes.file.secretMount.path")
-      .doc("When mounting files as secret, they're made available on drivers at this path..")
+      .doc("When mounting files as secret, they're made available on drivers at this path.")
       .internal()
       .stringConf
       .createWithDefault("/var/data/spark-submitted-files")
