@@ -20,15 +20,16 @@ import java.nio.file.Files
 
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.config._
-import org.apache.spark.util.TempDirectory
 
-class CondaEnvironmentManagerTest extends org.apache.spark.SparkFunSuite with TempDirectory {
+class CondaEnvironmentManagerTest extends org.apache.spark.SparkFunSuite {
   test("CondaEnvironmentManager.ensureExecutable") {
-    val path = tempDir.toPath.resolve("myfile")
-    Files.createFile(path)
-    assert(!Files.isExecutable(path), "File shouldn't be executable initially")
-    CondaEnvironmentManager.ensureExecutable(path.toString)
-    assert(Files.isExecutable(path), "File should now be executable")
+    withTempDir { tempDir =>
+      val path = tempDir.toPath.resolve("myfile")
+      Files.createFile(path)
+      assert(!Files.isExecutable(path), "File shouldn't be executable initially")
+      CondaEnvironmentManager.ensureExecutable(path.toString)
+      assert(Files.isExecutable(path), "File should now be executable")
+    }
   }
 
   test("CondaEnvironmentManager.redactCredentials") {
@@ -47,29 +48,31 @@ class CondaEnvironmentManagerTest extends org.apache.spark.SparkFunSuite with Te
   }
 
   test("CondaEnvironmentManager.failOnAuthenticatedPackageUrls") {
-    val packageUrl =
-      "https://myuser:password@x-5.bar/whatever/else/linux-64/package-0.0.1-py_0.tar.bz2"
-    val userInfo = "anotheruser:theirpassword"
+    withTempDir { tempDir =>
+      val packageUrl =
+        "https://myuser:password@x-5.bar/whatever/else/linux-64/package-0.0.1-py_0.tar.bz2"
+      val userInfo = "anotheruser:theirpassword"
 
-    val binaryPath = tempDir.toPath.resolve("dummy-conda.bin")
-    val condaEnvDir = tempDir.toPath.resolve("test-conda-env")
-    Files.createFile(binaryPath)
-    Files.createDirectory(condaEnvDir)
+      val binaryPath = tempDir.toPath.resolve("dummy-conda.bin")
+      val condaEnvDir = tempDir.toPath.resolve("test-conda-env")
+      Files.createFile(binaryPath)
+      Files.createDirectory(condaEnvDir)
 
-    val conf = new SparkConf()
-    conf.set(CONDA_BINARY_PATH, binaryPath.toString)
-    conf.set(CONDA_BOOTSTRAP_MODE, "File")
-    conf.set(CONDA_BOOTSTRAP_PACKAGE_URLS, Seq(packageUrl))
-    conf.set(CONDA_BOOTSTRAP_PACKAGE_URLS_USER_INFO, userInfo)
+      val conf = new SparkConf()
+      conf.set(CONDA_BINARY_PATH, binaryPath.toString)
+      conf.set(CONDA_BOOTSTRAP_MODE, "File")
+      conf.set(CONDA_BOOTSTRAP_PACKAGE_URLS, Seq(packageUrl))
+      conf.set(CONDA_BOOTSTRAP_PACKAGE_URLS_USER_INFO, userInfo)
 
-    val thrown = intercept[IllegalArgumentException] {
-      CondaEnvironmentManager.fromConf(conf)
-        .createWithFile(condaEnvDir.toString, Seq(packageUrl), Some(userInfo))
-    }
+      val thrown = intercept[IllegalArgumentException] {
+        CondaEnvironmentManager.fromConf(conf)
+          .createWithFile(condaEnvDir.toString, Seq(packageUrl), Some(userInfo))
+      }
 
-    assert(("requirement failed: Cannot pass condaPackageUrls with inlined auth; pass UserInfo " +
-      "via spark.conda.bootstrapPackageUrlsUserInfo.")
+      assert(("requirement failed: Cannot pass condaPackageUrls with inlined auth; pass UserInfo " +
+        "via spark.conda.bootstrapPackageUrlsUserInfo.")
         .equals(thrown.getMessage))
+    }
   }
 
   test("CondaEnvironmentManager.dropUserInfo") {
