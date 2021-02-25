@@ -12,6 +12,7 @@
   * core: Broadcast, CoarseGrainedExecutorBackend, CoarseGrainedSchedulerBackend, Executor, MapOutputTracker (partial), MemoryStore, SparkContext, TorrentBroadcast
   * kubernetes: ExecutorPodsAllocator, ExecutorPodsLifecycleManager, ExecutorPodsPollingSnapshotSource, ExecutorPodsSnapshot, ExecutorPodsWatchSnapshotSource, KubernetesClusterSchedulerBackend
   * yarn: YarnClusterSchedulerBackend, YarnSchedulerBackend
+* [SPARK-20001](https://issues.apache.org/jira/browse/SPARK-20001) ([SPARK-13587](https://issues.apache.org/jira/browse/SPARK-13587)) - Support PythonRunner executing inside a Conda env (and R)
 
 
 
@@ -23,6 +24,8 @@
 * [palantir/spark#600](https://github.com/palantir/spark/pull/600) K8s local deploy mode
 * Support Arrow-serialization of Python 2 strings [(#679)](https://github.com/palantir/spark/pull/679)
   * [palantir/spark#678](https://github.com/palantir/spark/issues/678) TODO: Revert 679 once we move off of python 2
+* Filter rLibDir by exists so that daemon.R references the correct file [(#460)](https://github.com/palantir/spark/pull/460)
+* Add pre-installed conda configuration and use to find rlib directory [(#700)](https://github.com/palantir/spark/pull/700)  
 
 
 
