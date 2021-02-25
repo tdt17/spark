@@ -21,6 +21,8 @@
 * [palantir/spark#381](https://github.com/palantir/spark/pull/381) Gradle plugin to easily create custom docker images for use with k8s
 * [palantir/spark#521](https://github.com/palantir/spark/pull/521) K8s local file mounting
 * [palantir/spark#600](https://github.com/palantir/spark/pull/600) K8s local deploy mode
+* Support Arrow-serialization of Python 2 strings [(#679)](https://github.com/palantir/spark/pull/679)
+  * [palantir/spark#678](https://github.com/palantir/spark/issues/678) TODO: Revert 679 once we move off of python 2
 
 
 
