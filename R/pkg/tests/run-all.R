@@ -54,55 +54,30 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
                              spark.executor.extraJavaOptions = tmpArg)
   }
 
-  test_package("SparkR")
-
   if (identical(Sys.getenv("NOT_CRAN"), "true")) {
     # set random seed for predictable results. mostly for base's sample() in tree and classification
     set.seed(42)
 
-    test_runner <- if (packageVersion("testthat")$major <= 1) {
-      # testthat 1.x
-      function(path, package, reporter, filter) {
-        testthat:::run_tests(
-          test_path = path,
-          package = package,
-          filter = filter,
-          reporter = reporter
-        )
-      }
-    } else if (packageVersion("testthat")$major == 2) {
-      # testthat >= 2.0.0, < 3.0.0
-      function(path, package, reporter, filter) {
-        testthat:::test_package_dir(
-          test_path = path,
-          package = package,
-          filter = filter,
-          reporter = reporter
-        )
-      }
-    } else {
-      # testthat >= 3.0.0
-      testthat::test_dir
-    }
-
-    reporter <- if (packageVersion("testthat")$major <= 1) {
-      "summary"
-    } else {
-      dir.create("target/test-reports", showWarnings = FALSE)
-      MultiReporter$new(list(
+    reporter <- MultiReporter$new(list(
         SummaryReporter$new(),
-        JunitReporter$new(
-          file = file.path(getwd(), "target/test-reports/test-results.xml")
-        )
-      ))
+        JunitReporter$new()
+    ))
+
+    if (identical(Sys.getenv("CONDA_TESTS"), "true")) {
+        test_path <- file.path(sparkRDir, "pkg", "tests", "condatests")
+        options(testthat.output_file = "target/R/R/conda/r-tests.xml")
+    } else {
+        test_path <- file.path(sparkRDir, "pkg", "tests", "fulltests")
+        options(testthat.output_file = "target/R/R/r-tests.xml")
+
+        test_package("SparkR", reporter = reporter)
     }
 
-    test_runner(
-      path = file.path(sparkRDir, "pkg", "tests", "fulltests"),
-      package = "SparkR",
-      reporter = reporter,
-      filter = NULL
-    )
+    test_runner <- testthat:::test_package_dir
+    test_runner("SparkR",
+                test_path,
+                NULL,
+                reporter)
   }
 
   SparkR:::uninstallDownloadedSpark()
