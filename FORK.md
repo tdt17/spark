@@ -1,4 +1,7 @@
 # Difference with upstream
+* [SPARK-15777](https://issues.apache.org/jira/browse/SPARK-15777) (Partial fix) - Catalog federation
+  * make ExternalCatalog configurable beyond in memory and hive
+  * FileIndex for catalog tables is provided by external catalog instead of using default impl
 * [SPARK-33089](https://issues.apache.org/jira/browse/SPARK-33088) Enhance ExecutorPlugin API to include callbacks on task start and end events
   * Merged upstream, remove when we migrate to 3.1  
 * [SPARK-18079](https://issues.apache.org/jira/browse/SPARK-18079) - CollectLimitExec.executeToIterator should perform per-partition limits
