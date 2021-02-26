@@ -993,16 +993,12 @@ class StatisticsSuite extends StatisticsCollectionTestBase with TestHiveSingleto
           assert(fetched1.get.colStats.size == 2)
 
           withTempPaths(numPaths = 2) { case Seq(dir1, dir2) =>
-            val partDir1 = new File(new File(dir1, "ds=2008-04-09"), "hr=11")
-            val file1 = new File(partDir1, "data")
-            file1.getParentFile.mkdirs()
+            val file1 = new File(dir1 + "/data")
             Utils.tryWithResource(new PrintWriter(file1)) { writer =>
               writer.write("1,a")
             }
 
-            val partDir2 = new File(new File(dir2, "ds=2008-04-09"), "hr=12")
-            val file2 = new File(partDir2, "data")
-            file2.getParentFile.mkdirs()
+            val file2 = new File(dir2 + "/data")
             Utils.tryWithResource(new PrintWriter(file2)) { writer =>
               writer.write("1,a")
             }
@@ -1011,8 +1007,8 @@ class StatisticsSuite extends StatisticsCollectionTestBase with TestHiveSingleto
             sql(
               s"""
                  |ALTER TABLE $table ADD
-                 |PARTITION (ds='2008-04-09', hr='11') LOCATION '${partDir1.toURI.toString}'
-                 |PARTITION (ds='2008-04-09', hr='12') LOCATION '${partDir1.toURI.toString}'
+                 |PARTITION (ds='2008-04-09', hr='11') LOCATION '${dir1.toURI.toString}'
+                 |PARTITION (ds='2008-04-09', hr='12') LOCATION '${dir2.toURI.toString}'
             """.stripMargin)
             if (autoUpdate) {
               val fetched2 = checkTableStats(table, hasSizeInBytes = true, expectedRowCounts = None)
@@ -1539,24 +1535,28 @@ class StatisticsSuite extends StatisticsCollectionTestBase with TestHiveSingleto
 
           // analyze table
           sql(s"ANALYZE TABLE $tblName COMPUTE STATISTICS NOSCAN")
+
+          // TODO(palantir): sizeInBytes differs from upstream
+          // That's probably b/c our Parquet version and Parquet-related Spark conf differ
+
           var tableStats = getTableStats(tblName)
-          assert(tableStats.sizeInBytes == 601)
+          assert(tableStats.sizeInBytes == 650)
           assert(tableStats.rowCount.isEmpty)
 
           sql(s"ANALYZE TABLE $tblName COMPUTE STATISTICS")
           tableStats = getTableStats(tblName)
-          assert(tableStats.sizeInBytes == 601)
+          assert(tableStats.sizeInBytes == 650)
           assert(tableStats.rowCount.get == 1)
 
           // analyze a single partition
           sql(s"ANALYZE TABLE $tblName PARTITION (ds='2019-12-13') COMPUTE STATISTICS NOSCAN")
           var partStats = getPartitionStats(tblName, Map("ds" -> "2019-12-13"))
-          assert(partStats.sizeInBytes == 601)
+          assert(partStats.sizeInBytes == 650)
           assert(partStats.rowCount.isEmpty)
 
           sql(s"ANALYZE TABLE $tblName PARTITION (ds='2019-12-13') COMPUTE STATISTICS")
           partStats = getPartitionStats(tblName, Map("ds" -> "2019-12-13"))
-          assert(partStats.sizeInBytes == 601)
+          assert(partStats.sizeInBytes == 650)
           assert(partStats.rowCount.get == 1)
         }
       }

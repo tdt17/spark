@@ -111,6 +111,12 @@ spark-deps-.*
 .Rbuildignore
 META-INF/*
 spark-warehouse
+circle.yml
+.credentials
+publish.sh
+publish-local.sh
+publish_functions.sh
+set_version_and_package.sh
 structured-streaming/*
 kafka-source-initial-offset-version-2.1.0.bin
 kafka-source-initial-offset-future-version.bin
@@ -127,3 +133,6 @@ flights_tiny.txt.1
 over1k
 over10k
 exported_table/*
+.bulldozer.yml
+.policy.yml
+build.gradle

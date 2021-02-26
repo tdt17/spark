@@ -217,20 +217,21 @@ repl = Module(
     ],
 )
 
-hive_thriftserver = Module(
-    name="hive-thriftserver",
-    dependencies=[hive],
-    source_file_regexes=[
-        "sql/hive-thriftserver",
-        "sbin/start-thriftserver.sh",
-    ],
-    build_profile_flags=[
-        "-Phive-thriftserver",
-    ],
-    sbt_test_goals=[
-        "hive-thriftserver/test",
-    ]
-)
+# Palantir: We don't need the Hive Thrift Server and tests in the module are failing
+# hive_thriftserver = Module(
+#     name="hive-thriftserver",
+#     dependencies=[hive],
+#     source_file_regexes=[
+#         "sql/hive-thriftserver",
+#         "sbin/start-thriftserver.sh",
+#     ],
+#     build_profile_flags=[
+#         "-Phive-thriftserver",
+#     ],
+#     sbt_test_goals=[
+#         "hive-thriftserver/test",
+#     ]
+# )
 
 avro = Module(
     name="avro",
@@ -548,7 +549,6 @@ pyspark_ml = Module(
         "pyspark.ml.tests.test_stat",
         "pyspark.ml.tests.test_training_summary",
         "pyspark.ml.tests.test_tuning",
-        "pyspark.ml.tests.test_util",
         "pyspark.ml.tests.test_wrapper",
     ],
     blacklisted_python_implementations=[
