@@ -26,6 +26,7 @@ import scala.util.control.NonFatal
 
 import org.apache.commons.lang3.{JavaVersion, SystemUtils}
 import org.apache.hadoop.conf.Configuration
+import org.scalatest.Ignore
 
 import org.apache.spark.{SecurityManager, SparkConf, TestUtils}
 import org.apache.spark.internal.config.MASTER_REST_SERVER_ENABLED
@@ -48,6 +49,7 @@ import org.apache.spark.util.Utils
  */
 @SlowHiveTest
 @ExtendedHiveTest
+@Ignore
 class HiveExternalCatalogVersionsSuite extends SparkSubmitTestUtils {
   private val isTestAtLeastJava9 = SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)
   private val wareHousePath = Utils.createTempDir(namePrefix = "warehouse")
