@@ -273,9 +273,9 @@ class SQLConfSuite extends QueryTest with SharedSparkSession {
   test("SPARK-10365: PARQUET_OUTPUT_TIMESTAMP_TYPE") {
     spark.sessionState.conf.clear()
 
-    // check default value
+    // check default value (Palantir differs here, see config docs)
     assert(spark.sessionState.conf.parquetOutputTimestampType ==
-      SQLConf.ParquetOutputTimestampType.INT96)
+      SQLConf.ParquetOutputTimestampType.TIMESTAMP_MICROS)
 
     spark.sessionState.conf.setConf(SQLConf.PARQUET_OUTPUT_TIMESTAMP_TYPE, "timestamp_micros")
     assert(spark.sessionState.conf.parquetOutputTimestampType ==

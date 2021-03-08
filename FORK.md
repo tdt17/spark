@@ -14,10 +14,7 @@
   * yarn: YarnClusterSchedulerBackend, YarnSchedulerBackend
 * [SPARK-20001](https://issues.apache.org/jira/browse/SPARK-20001) ([SPARK-13587](https://issues.apache.org/jira/browse/SPARK-13587)) - Support PythonRunner executing inside a Conda env (and R)
 * [SPARK-21195](https://issues.apache.org/jira/browse/SPARK-21195) - Automatically register new metrics from sources and wire default registry
-
-
-
-
+* `spark.sql.parquet.outputTimestampType` defaults to `INT64 (TIMESTAMP_MICROS)`
 
 # Added
 * [palantir/spark#381](https://github.com/palantir/spark/pull/381) Gradle plugin to easily create custom docker images for use with k8s

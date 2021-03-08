@@ -622,7 +622,10 @@ object SQLConf {
     .stringConf
     .transform(_.toUpperCase(Locale.ROOT))
     .checkValues(ParquetOutputTimestampType.values.map(_.toString))
-    .createWithDefault(ParquetOutputTimestampType.INT96.toString)
+    // Palantir differs here: The upstream default is INT96 but INT96 is considered deprecated by
+    // Parquet and we rely internally on the default being INT64 (TIMESTAMP_MICROS).
+    // See https://issues.apache.org/jira/browse/PARQUET-323
+    .createWithDefault(ParquetOutputTimestampType.TIMESTAMP_MICROS.toString)
 
   val PARQUET_COMPRESSION = buildConf("spark.sql.parquet.compression.codec")
     .doc("Sets the compression codec used when writing Parquet files. If either `compression` or " +
