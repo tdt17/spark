@@ -155,7 +155,7 @@
     <oro.version>2.0.8</oro.version>
     <dropwizard.metrics.version>3.2.6</dropwizard.metrics.version>
     <dropwizard.version>1.0.0</dropwizard.version>
-    <avro.version>1.8.2</avro.version>
+    <avro.version>1.10.2</avro.version>
     <avro.mapred.classifier>hadoop2</avro.mapred.classifier>
     <aws.kinesis.client.version>1.8.10</aws.kinesis.client.version>
     <!-- Should be consistent with Kinesis client dependency -->
