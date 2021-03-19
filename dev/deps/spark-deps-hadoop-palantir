@@ -15,9 +15,10 @@ arrow-memory-0.15.1.jar
 arrow-vector-0.15.1.jar
 audience-annotations-0.7.0.jar
 automaton-1.11-8.jar
-avro-1.8.2.jar
-avro-ipc-1.8.2.jar
-avro-mapred-1.8.2-hadoop2.jar
+avro-1.10.2.jar
+avro-ipc-1.10.2.jar
+avro-ipc-jetty-1.10.2.jar
+avro-mapred-1.10.2.jar
 aws-java-sdk-bundle-1.11.201.jar
 azure-data-lake-store-sdk-2.2.7.jar
 azure-keyvault-core-0.8.0.jar
@@ -203,6 +204,7 @@ stax2-api-3.1.4.jar
 stream-2.9.6.jar
 univocity-parsers-2.8.3.jar
 validation-api-1.1.0.Final.jar
+velocity-engine-core-2.3.jar
 wildfly-openssl-1.0.7.Final.jar
 woodstox-core-5.0.3.jar
 xbean-asm7-shaded-4.15.jar
