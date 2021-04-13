@@ -80,6 +80,7 @@ jackson-core/2.12.1//jackson-core-2.12.1.jar
 jackson-databind/2.12.1//jackson-databind-2.12.1.jar
 jackson-dataformat-yaml/2.12.1//jackson-dataformat-yaml-2.12.1.jar
 jackson-jaxrs/1.9.13//jackson-jaxrs-1.9.13.jar
+jackson-mapper-asl/1.9.13//jackson-mapper-asl-1.9.13.jar
 jackson-module-scala_2.12/2.12.1//jackson-module-scala_2.12-2.12.1.jar
 jackson-xc/1.9.13//jackson-xc-1.9.13.jar
 jakarta.annotation-api/1.3.5//jakarta.annotation-api-1.3.5.jar
