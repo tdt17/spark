@@ -16,9 +16,9 @@ arrow-format/0.15.1//arrow-format-0.15.1.jar
 arrow-memory/0.15.1//arrow-memory-0.15.1.jar
 arrow-vector/0.15.1//arrow-vector-0.15.1.jar
 audience-annotations/0.5.0//audience-annotations-0.5.0.jar
-avro-ipc/1.8.2//avro-ipc-1.8.2.jar
-avro-mapred/1.8.2/hadoop2/avro-mapred-1.8.2-hadoop2.jar
-avro/1.8.2//avro-1.8.2.jar
+avro-ipc/1.10.1//avro-ipc-1.10.1.jar
+avro-mapred/1.10.1//avro-mapred-1.10.1.jar
+avro/1.10.1//avro-1.10.1.jar
 breeze-macros_2.12/1.0//breeze-macros_2.12-1.0.jar
 breeze_2.12/1.0//breeze_2.12-1.0.jar
 cats-kernel_2.12/2.0.0-M4//cats-kernel_2.12-2.0.0-M4.jar
@@ -172,6 +172,6 @@ univocity-parsers/2.9.0//univocity-parsers-2.9.0.jar
 woodstox-core/5.0.3//woodstox-core-5.0.3.jar
 xbean-asm7-shaded/4.15//xbean-asm7-shaded-4.15.jar
 xmlenc/0.52//xmlenc-0.52.jar
-xz/1.5//xz-1.5.jar
+xz/1.8//xz-1.8.jar
 zookeeper/3.4.14//zookeeper-3.4.14.jar
 zstd-jni/1.4.4-3//zstd-jni-1.4.4-3.jar
