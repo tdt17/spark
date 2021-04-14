@@ -50,12 +50,12 @@ acquire_sbt_jar () {
     # Download
     printf "Attempting to fetch sbt\n"
 
-  # TODO(lmartini: remove debug
-  echo "Downloading sbt from ${URL1}"
+    # TODO(lmartini: remove debug
+    printf "Downloading sbt from ${URL1}"
 
     JAR_DL="${JAR}.part"
     if [ $(command -v curl) ]; then
-      curl --fail --location --silent ${URL1} > "${JAR_DL}" &&\
+      curl --fail --location ${URL1} > "${JAR_DL}" &&\
         mv "${JAR_DL}" "${JAR}"
     elif [ $(command -v wget) ]; then
       wget --quiet ${URL1} -O "${JAR_DL}" &&\
