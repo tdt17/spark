@@ -327,7 +327,7 @@ object SparkBuild extends PomBuild {
       for {
         dep <- pom.getDependencyManagement.getDependencies.asScala
       } yield MavenHelper.convertDep(dep)
-    }.value.toSet
+    }.value.toSet,
 
     // disable Mima check for all modules,
     // to be enabled in specific ones that have previous artifacts
