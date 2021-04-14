@@ -49,6 +49,10 @@ acquire_sbt_jar () {
     if [ ! -f "${JAR}" ]; then
     # Download
     printf "Attempting to fetch sbt\n"
+
+  # TODO(lmartini: remove debug
+  echo "Downloading sbt from ${URL1}"
+
     JAR_DL="${JAR}.part"
     if [ $(command -v curl) ]; then
       curl --fail --location --silent ${URL1} > "${JAR_DL}" &&\
