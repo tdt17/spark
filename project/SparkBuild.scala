@@ -323,15 +323,15 @@ object SparkBuild extends PomBuild {
       analysis
     },
 
+    // disable Mima check for all modules,
+    // to be enabled in specific ones that have previous artifacts
+    MimaKeys.mimaFailOnNoPrevious := false,
+
     dependencyOverrides ++= MavenHelper.fromPom { pom =>
       for {
         dep <- pom.getDependencyManagement.getDependencies.asScala
       } yield MavenHelper.convertDep(dep)
-    }.value.toSet,
-
-    // disable Mima check for all modules,
-    // to be enabled in specific ones that have previous artifacts
-    MimaKeys.mimaFailOnNoPrevious := false
+    }.value.toSet
   )
 
   def enable(settings: Seq[Setting[_]])(projectRef: ProjectRef) = {
