@@ -331,7 +331,7 @@ object SparkBuild extends PomBuild {
       for {
         dep <- pom.getDependencyManagement.getDependencies.asScala
       } yield MavenHelper.convertDep(dep)
-    }.value.toSet
+    }.value.toSeq
   )
 
   def enable(settings: Seq[Setting[_]])(projectRef: ProjectRef) = {
