@@ -288,6 +288,8 @@ object CirclePlugin extends AutoPlugin {
       }
     },
 
-    test := 0
+    test := test andFinally {
+      copyTestReportsToCircle.map(_ => ())
+    }.value
   ))
 }
