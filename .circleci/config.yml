@@ -251,7 +251,7 @@ jobs:
       - attach_workspace:
           at: .
       - *restore-ivy-cache
-      - *restore-build-binaries-cache
+      #- *restore-build-binaries-cache
       - *restore-home-sbt-cache
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
@@ -316,11 +316,11 @@ jobs:
       - attach_workspace:
           at: .
       # These two steps restore all the target directories except jars
-      - *restore-build-sbt-cache
+      #- *restore-build-sbt-cache
       - *link-in-build-sbt-cache
       # ---
       - *restore-ivy-cache
-      - *restore-build-binaries-cache
+      #- *restore-build-binaries-cache
       - *restore-home-sbt-cache
       - restore_cache:
           keys:
