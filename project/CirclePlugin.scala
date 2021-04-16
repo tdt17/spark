@@ -288,8 +288,8 @@ object CirclePlugin extends AutoPlugin {
       }
     },
 
-    test := test andFinally {
-      copyTestReportsToCircle.map(_ => ())
-    }.value
+    test := (test andFinally Def.taskDyn {
+      copyTestReportsToCircle
+    }).value
   ))
 }
