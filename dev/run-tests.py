@@ -365,18 +365,6 @@ def build_spark_sbt(extra_profiles):
     exec_sbt(profiles_and_goals)
 
 
-def build_spark_unidoc_sbt(extra_profiles):
-    set_title_and_block("Building Spark", "BLOCK_DOCUMENTATION")
-    # Enable all of the profiles for the build:
-    build_profiles = extra_profiles + modules.root.build_profile_flags
-    profiles_and_goals = build_profiles
-
-    print("[info] Building Spark unidoc using SBT with these arguments: ",
-          " ".join(profiles_and_goals))
-
-    exec_sbt(profiles_and_goals)
-
-
 def build_spark_assembly_sbt(extra_profiles, checkstyle=False):
     # Enable all of the profiles for the build:
     build_profiles = extra_profiles + modules.root.build_profile_flags
@@ -385,11 +373,6 @@ def build_spark_assembly_sbt(extra_profiles, checkstyle=False):
     print("[info] Building Spark assembly using SBT with these arguments: ",
           " ".join(profiles_and_goals))
     exec_sbt(profiles_and_goals)
-
-    if checkstyle:
-        run_java_style_checks(build_profiles)
-
-    build_spark_unidoc_sbt(extra_profiles)
 
 
 def build_apache_spark(build_tool, extra_profiles):
