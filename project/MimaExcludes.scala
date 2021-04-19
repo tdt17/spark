@@ -67,6 +67,10 @@ object MimaExcludes {
     ProblemFilters.exclude[NewMixinForwarderProblem]("org.apache.spark.ml.classification.BinaryLogisticRegressionSummary.recallByThreshold"),
     ProblemFilters.exclude[IncompatibleResultTypeProblem]("org.apache.spark.ml.classification.FMClassifier.trainImpl"),
     ProblemFilters.exclude[IncompatibleResultTypeProblem]("org.apache.spark.ml.regression.FMRegressor.trainImpl"),
+    // Additional excludes not in upstream but unique to palantir fork
+    ProblemFilters.exclude[DirectMissingMethodProblem]("org.apache.spark.SparkContext.initializeForcefully"),
+    ProblemFilters.exclude[DirectMissingMethodProblem]("org.apache.spark.SparkContext.initializeForcefully"),
+    ProblemFilters.exclude[DirectMissingMethodProblem]("org.apache.spark.broadcast.Broadcast.initializeForcefully"),
 
     // [SPARK-23429][CORE] Add executor memory metrics to heartbeat and expose in executors REST API
     ProblemFilters.exclude[DirectMissingMethodProblem]("org.apache.spark.scheduler.SparkListenerExecutorMetricsUpdate.apply"),
