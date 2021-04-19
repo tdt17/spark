@@ -204,9 +204,9 @@ jobs:
             if [[ -d "$BUILD_SBT_CACHE" ]]; then
               rsync --info=stats2,misc1,flist0 -a --link-dest="$BUILD_SBT_CACHE" "$BUILD_SBT_CACHE/" .
             fi
-      - *restore-ivy-cache
-      - *restore-home-sbt-cache
-      - *restore-build-binaries-cache
+      #- *restore-ivy-cache
+      #- *restore-home-sbt-cache
+      #- *restore-build-binaries-cache
       - run:
           name: Download all external dependencies for the test configuration (which extends compile) and ensure we update first
           command: dev/sbt test:externalDependencyClasspath oldDeps/test:externalDependencyClasspath
@@ -251,7 +251,7 @@ jobs:
       - attach_workspace:
           at: .
       - *restore-ivy-cache
-      - *restore-build-binaries-cache
+      #- *restore-build-binaries-cache
       - *restore-home-sbt-cache
       - run: |
           dev/run-backcompat-tests.py | tee /tmp/run-backcompat-tests.log
@@ -316,11 +316,11 @@ jobs:
       - attach_workspace:
           at: .
       # These two steps restore all the target directories except jars
-      - *restore-build-sbt-cache
+      #- *restore-build-sbt-cache
       - *link-in-build-sbt-cache
       # ---
       - *restore-ivy-cache
-      - *restore-build-binaries-cache
+      #- *restore-build-binaries-cache
       - *restore-home-sbt-cache
       - restore_cache:
           keys:
