@@ -35,7 +35,6 @@ addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "0.8.0")
 
 addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.4.3")
 
-<<<<<<< HEAD
 // need to make changes to uptake sbt 1.0 support in "com.eed3si9n" % "sbt-unidoc" % "0.4.1"
 addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.3.3")
 
