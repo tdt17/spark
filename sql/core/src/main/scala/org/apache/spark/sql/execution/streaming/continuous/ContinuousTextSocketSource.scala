@@ -39,6 +39,8 @@ import org.apache.spark.sql.sources.v2.reader._
 import org.apache.spark.sql.sources.v2.reader.streaming._
 import org.apache.spark.util.RpcUtils
 
+import org.apache.spark.unsafe.types.UTF8String
+
 
 /**
  * A [[ContinuousStream]] that reads text lines through a TCP socket, designed only for tutorials
@@ -61,7 +63,7 @@ class TextSocketContinuousStream(
   private var readThread: Thread = _
 
   @GuardedBy("this")
-  private val buckets = Seq.fill(numPartitions)(new ListBuffer[(String, Timestamp)])
+  private val buckets = Seq.fill(numPartitions)(new ListBuffer[(UTF8String, Timestamp)])
 
   @GuardedBy("this")
   private var currentOffset: Int = -1
@@ -178,7 +180,7 @@ class TextSocketContinuousStream(
             }
             TextSocketContinuousStream.this.synchronized {
               currentOffset += 1
-              val newData = (line,
+              val newData = (UTF8String.fromString(line),
                 Timestamp.valueOf(
                   TextSocketReader.DATE_FORMAT.format(Calendar.getInstance().getTime()))
               )
@@ -272,7 +274,7 @@ class TextSocketContinuousPartitionReader(
         rec
       } else {
         InternalRow(rec.get(0, TextSocketReader.SCHEMA_TIMESTAMP)
-          .asInstanceOf[(String, Timestamp)]._1)
+          .asInstanceOf[(UTF8String, Timestamp)]._1)
       }
     )
 }
