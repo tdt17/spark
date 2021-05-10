@@ -41,8 +41,6 @@ import org.apache.spark.sql.streaming.{StreamingQueryException, StreamTest}
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types._
 
-import org.apache.spark.unsafe.types.UTF8String
-
 class TextSocketStreamSuite extends StreamTest with SharedSQLContext with BeforeAndAfterEach {
 
   override def afterEach() {
@@ -321,7 +319,7 @@ class TextSocketStreamSuite extends StreamTest with SharedSQLContext with Before
           for (i <- 0 until numRecords / 2) {
             r.next()
             offsets.append(r.getOffset().asInstanceOf[ContinuousRecordPartitionOffset].offset)
-            data.append(r.get().get(0, DataTypes.StringType).asInstanceOf[UTF8String].toInt)
+            data.append(r.get().get(0, DataTypes.StringType).asInstanceOf[String].toInt)
             // commit the offsets in the middle and validate if processing continues
             if (i == 2) {
               commitOffset(t.partitionId, i + 1)
