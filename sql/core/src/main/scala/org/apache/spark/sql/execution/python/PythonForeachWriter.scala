@@ -119,7 +119,7 @@ object PythonForeachWriter {
     }
 
     private def remove(): UnsafeRow = withLock {
-      while (count == 0 && !allAdded && exception == null) {
+      while (count == 0 && exception == null) {
         unblockRemove.await(100, TimeUnit.MILLISECONDS)
       }
 
